@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Enforces Conventional Commits format: https://www.conventionalcommits.org
+#
+# Allowed types: feat, fix, docs, chore, refactor, test, ci, perf, style, revert
+#
+# Examples of valid messages:
+#   feat: add JWT authentication
+#   fix(auth): handle expired token refresh
+#   chore: update pom.xml dependencies
+#   feat!: redesign threat feed API (breaking change)
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Skip merge commits and fixup commits
+if echo "$COMMIT_MSG" | grep -qE "^(Merge|fixup!|squash!)"; then
+  exit 0
+fi
+
+PATTERN="^(feat|fix|docs|chore|refactor|test|ci|perf|style|revert)(\(.+\))?(!)?: .{1,100}$"
+
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+  echo ""
+  echo "  ✗ Invalid commit message format."
+  echo ""
+  echo "  Required format: <type>(<scope>): <description>"
+  echo ""
+  echo "  Allowed types: feat, fix, docs, chore, refactor, test, ci, perf, style, revert"
+  echo ""
+  echo "  Examples:"
+  echo "    feat: add JWT authentication"
+  echo "    fix(auth): handle expired token refresh"
+  echo "    chore: update pom.xml dependencies"
+  echo "    feat!: redesign threat feed API"
+  echo ""
+  echo "  Your message: \"$COMMIT_MSG\""
+  echo ""
+  exit 1
+fi
+
+exit 0

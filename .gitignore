@@ -1,0 +1,73 @@
+# ─── CLAUDE.md (private project instructions) ───────────────────────────────
+CLAUDE.md
+
+# ─── Environment / Secrets ───────────────────────────────────────────────────
+.env
+.env.*
+*.env
+# Negation must come last — re-allows the example template file to be committed
+!.env.example
+
+# Local dev application config (contains real API keys)
+backend/src/main/resources/application-dev.yml
+backend/src/main/resources/application-prod.yml
+docker-compose.override.yml
+
+# ─── Java / Maven ────────────────────────────────────────────────────────────
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# Maven wrapper (keep mvnw script but ignore downloaded wrapper jar)
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+
+# IDE generated
+*.iml
+*.ipr
+*.iws
+
+# ─── Spring Boot ─────────────────────────────────────────────────────────────
+spring.log
+logs/
+
+# ─── IntelliJ IDEA ───────────────────────────────────────────────────────────
+.idea/
+*.iml
+out/
+
+# ─── VS Code ─────────────────────────────────────────────────────────────────
+.vscode/
+!.vscode/extensions.json
+
+# ─── Node.js / Vue / Quasar ──────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.quasar/
+frontend/.cache/
+frontend/coverage/
+
+# Quasar build artifacts
+frontend/src-pwa/
+frontend/src-ssr/
+frontend/src-electron/
+frontend/src-bex/
+
+# ─── Docker ──────────────────────────────────────────────────────────────────
+# Keep docker-compose.yml and Dockerfiles, ignore generated volumes data
+.docker-data/
+
+# ─── OS / System files ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Test reports & coverage ─────────────────────────────────────────────────
+backend/target/surefire-reports/
+backend/target/site/jacoco/
