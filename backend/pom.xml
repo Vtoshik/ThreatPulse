@@ -66,10 +66,17 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- ── Validation (@Valid, @NotBlank тощо) ─────────────────────────── -->
+		<!-- ── Validation (@Valid, @NotBlank ...) ─────────────────────────── -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+
+		<!-- ── Argon2 ─────────────────────────── -->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcpkix-jdk18on</artifactId>
+			<version>1.79</version>
 		</dependency>
 
 		<!-- ── Database ────────────────────────────────────────────────────── -->
