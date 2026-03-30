@@ -10,6 +10,12 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.OffsetDateTime;
 
+/**
+ * JPA entity representing a user in the system.
+ * Stores essential user information including username, email, and hashed password.
+ * Supports auditing fields to track creation and last modification times.
+ * This entity is mapped to the "users" table in the database.
+ */
 @Getter
 @Setter
 @Entity
