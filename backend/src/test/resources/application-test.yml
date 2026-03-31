@@ -1,0 +1,26 @@
+# Test profile configuration
+# Datasource is overridden by @DynamicPropertySource in test classes (Testcontainers)
+
+spring:
+  # Disable Redis and Kafka auto-configuration — not needed for auth tests
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+app:
+  jwt:
+    # Test secret — only used in tests, not a real secret
+    secret: dGVzdFNlY3JldEtleVRoYXRJc0xvbmdFbm91Z2gxMjM=
+    expiry-hours: 24
+    refresh-expiry-days: 30
+
+logging:
+  level:
+    com.threatpulse: DEBUG

@@ -1,6 +1,8 @@
 package com.threatpulse.auth.dto;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Data Transfer Object (DTO) representing the authentication response.
@@ -8,7 +10,9 @@ import lombok.Getter;
  * (default is "Bearer"). This object is typically returned to the client and used
  * for authorizing subsequent requests.
  */
+@Setter
 @Getter
+@NoArgsConstructor
 public class AuthResponse {
     private String accessToken;
     private String tokenType = "Bearer";

@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Data Transfer Object (DTO) used to encapsulate user registration data.
@@ -11,6 +12,7 @@ import lombok.Getter;
  * Validation annotations ensure that the provided data meets basic constraints
  * such as non-empty email, valid email format, and minimum password length.
  */
+@Setter
 @Getter
 public class RegisterRequest {
     @NotBlank
