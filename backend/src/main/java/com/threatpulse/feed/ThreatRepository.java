@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
+
 /**
  * Repository interface for accessing Threat entities.
  * <p>
@@ -16,4 +18,5 @@ public interface ThreatRepository extends JpaRepository<Threat, Long> {
     Page<Threat> findAllByOrderByCollectedAtDesc(Pageable pageable);
     Page<Threat> findBySeverityOrderByCollectedAtDesc(Severity severity, Pageable pageable);
     boolean existsByExternalId(String externalId);
+    Optional<Threat> findByExternalId(String externalId);
 }
