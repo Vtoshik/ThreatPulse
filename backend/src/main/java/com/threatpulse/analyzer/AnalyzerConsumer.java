@@ -26,6 +26,11 @@ public class AnalyzerConsumer {
 
     @KafkaListener(topics = KafkaConfig.RAW_THREATS_TOPIC, groupId = "analyzer-group")
     public void consume(RawThreatEvent event) {
+        if (threatRepository.existsByExternalId(event.externalId())) {
+            log.info("Threat already exists, skipping: {}", event.externalId());
+            return;
+        }
+
         log.info("Analyzing threat: {}", event.externalId());
 
         AnalyzedThreatEvent analyzed = threatAnalyzer.analyze(event);
