@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# application.yml — BASE CONFIGURATION (committed to git, no secrets)
+#
+# Contains only general settings shared across all environments.
+# Real API keys and passwords go in application-dev.yml (excluded via .gitignore).
+# ─────────────────────────────────────────────────────────────────────────────
+
+spring:
+  application:
+    name: threatpulse
+
+  # ── JPA / Hibernate ──────────────────────────────────────────────────────────
+  jpa:
+    hibernate:
+      # validate — checks that the DB schema matches entities but never changes it.
+      # Flyway owns all schema changes, so Hibernate should never auto-create tables.
+      ddl-auto: validate
+    show-sql: false  # set to true only when debugging queries locally
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  # ── Flyway (database migrations) ─────────────────────────────────────────────
+  flyway:
+    enabled: true
+    locations: classpath:db/migration  # SQL files named V1__, V2__, etc.
+
+  # ── Kafka ─────────────────────────────────────────────────────────────────────
+  kafka:
+    consumer:
+      # earliest — start reading from the beginning of the topic if no saved offset exists
+      auto-offset-reset: earliest
+      # Spring automatically deserializes JSON messages into Java objects
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.threatpulse.*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+# ── Spring Boot Actuator (health checks, metrics) ────────────────────────────
+# /actuator/health is used by Railway and Docker to check if the app is alive
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized

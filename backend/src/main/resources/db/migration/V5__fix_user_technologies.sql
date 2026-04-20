@@ -1,0 +1,1 @@
+ALTER TABLE user_technologies DROP COLUMN id, DROP COLUMN created_at;

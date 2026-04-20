@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# application-dev.yml.example — TEMPLATE FOR LOCAL DEVELOPMENT
+#
+# Copy this file and fill in your own keys:
+#   cp application-dev.yml.example application-dev.yml
+#
+# application-dev.yml is listed in .gitignore — it must NEVER be committed.
+# ─────────────────────────────────────────────────────────────────────────────
+
+spring:
+
+  # ── Database (local Docker container) ────────────────────────────────────────
+  datasource:
+    url: jdbc:postgresql://localhost:5432/threatpulse
+    username: threatpulse
+    password: secret  # must match POSTGRES_PASSWORD in docker-compose.yml
+    driver-class-name: org.postgresql.Driver
+
+  # ── Kafka (local Docker container) ───────────────────────────────────────────
+  kafka:
+    bootstrap-servers: localhost:9092
+
+  # ── Redis (local Docker container) ───────────────────────────────────────────
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  # ── JPA in dev mode ──────────────────────────────────────────────────────────
+  jpa:
+    show-sql: true  # prints SQL queries to the console — useful while learning
+
+# ── Server ───────────────────────────────────────────────────────────────────
+server:
+  port: 8080
+
+# ── External APIs ─────────────────────────────────────────────────────────────
+app:
+  api:
+    nvd-key: YOUR_NVD_API_KEY_HERE          # optional, but increases rate limit
+    news-api-key: YOUR_NEWS_API_KEY_HERE    # from newsapi.org
+    groq-key: YOUR_GROQ_API_KEY_HERE        # from console.groq.com
+    huggingface-key: YOUR_HF_API_KEY_HERE   # from huggingface.co (Read token)
+    resend-key: YOUR_RESEND_API_KEY_HERE    # from resend.com
+
+  # ── JWT ──────────────────────────────────────────────────────────────────────
+  jwt:
+    # minimum 32 characters — generate one with: openssl rand -base64 32
+    secret: CHANGE_ME_minimum_32_character_secret_key
+    expiry-hours: 24
+    refresh-expiry-days: 30
+
+# ── Logging in dev mode ───────────────────────────────────────────────────────
+logging:
+  level:
+    com.threatpulse: DEBUG      # our code — verbose logs
+    org.springframework: INFO   # Spring framework — important events only
+    org.hibernate.SQL: DEBUG    # SQL queries (enable when debugging DB issues)
