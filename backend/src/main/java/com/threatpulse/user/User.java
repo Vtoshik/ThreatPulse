@@ -9,6 +9,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.OffsetDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * JPA entity representing a user in the system.
@@ -37,6 +39,14 @@ public class User {
     private OffsetDateTime createdAt;
     @LastModifiedDate
     private OffsetDateTime updatedAt;
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "user_technologies",
+            joinColumns = @JoinColumn(name = "user_id")
+    )
+    @Column(name = "technology_name")
+    private Set<String> technologies = new HashSet<>();
+
 
     public User(String username, String email, String passwordHash) {
         this.username = username;
