@@ -17,10 +17,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class AuthServiceTest {
@@ -97,5 +96,21 @@ public class AuthServiceTest {
 
         AuthResponse response = authService.login(request);
         assertThat(response.getAccessToken()).isEqualTo("jwt.token.here");
+    }
+
+    @Test
+    void register_shouldNotSaveUser_whenEmailAlreadyExists() {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("testuser");
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
+
+        when(userRepository.existsByEmail("test@example.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Email already in use");
+
+        verify(userRepository, never()).save(any(User.class));
     }
 }
