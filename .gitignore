@@ -52,6 +52,7 @@ frontend/dist/
 frontend/.quasar/
 frontend/.cache/
 frontend/coverage/
+frontend/design/
 
 # Quasar build artifacts
 frontend/src-pwa/

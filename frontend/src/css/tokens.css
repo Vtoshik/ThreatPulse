@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap');
+
+:root {
+  /* Backgrounds */
+  --tp-bg:      #0a0a0a;
+  --tp-surface: #111111;
+  --tp-surf2:   #1a1a1a;
+  --tp-surf3:   #222222;
+  --tp-surf4:   #2a2a2a;
+
+  /* Text */
+  --tp-text:    #fafafa;
+  --tp-sec:     #a1a1a1;
+  --tp-muted:   #666666;
+  --tp-dimmer:  #333333;
+
+  /* Typography */
+  --tp-font: "Geist", "DM Sans", "Helvetica Neue", sans-serif;
+  --tp-mono: "Geist Mono", "DM Mono", ui-monospace, monospace;
+
+  /* Severity — Critical */
+  --tp-crit:      #ef4444;
+  --tp-crit-bg:   rgba(239, 68, 68, 0.1);
+  --tp-crit-ring: rgba(239, 68, 68, 0.25);
+
+  /* Severity — High */
+  --tp-high:      #f97316;
+  --tp-high-bg:   rgba(249, 115, 22, 0.1);
+  --tp-high-ring: rgba(249, 115, 22, 0.25);
+
+  /* Severity — Medium */
+  --tp-med:       #eab308;
+  --tp-med-bg:    rgba(234, 179, 8, 0.08);
+  --tp-med-ring:  rgba(234, 179, 8, 0.2);
+
+  /* Severity — Low */
+  --tp-low:       #3b82f6;
+  --tp-low-bg:    rgba(59, 130, 246, 0.1);
+  --tp-low-ring:  rgba(59, 130, 246, 0.25);
+
+  /* Severity — Info */
+  --tp-info:      #6b7280;
+  --tp-info-bg:   rgba(107, 114, 128, 0.08);
+  --tp-info-ring: rgba(107, 114, 128, 0.2);
+
+  /* Accent (white-ish, Vercel style) */
+  --tp-accent: #fafafa;
+
+  /* Border color for box-shadow trick */
+  --tp-border: rgba(255, 255, 255, 0.08);
+  --tp-border-bright: rgba(255, 255, 255, 0.14);
+
+  /* Composite shadows */
+  --tp-sb:   rgba(255, 255, 255, 0.08) 0px 0px 0px 1px;
+  --tp-sb2:  rgba(255, 255, 255, 0.14) 0px 0px 0px 1px;
+  --tp-card: rgba(255, 255, 255, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.5) 0px 4px 16px;
+}
