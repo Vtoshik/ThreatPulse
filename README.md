@@ -82,6 +82,31 @@ PUT /api/user/preferences
 
 ---
 
+## Frontend UI
+
+> **Note:** The frontend is currently a UI prototype built with Vue 3 + Quasar using mock data.
+> Backend integration (real API calls, JWT auth flow, WebSocket) is the next planned phase.
+
+### Landing & Auth
+
+| Landing Page | Login | Register |
+|---|---|---|
+| ![Landing](docs/screenshots/LandingPage.png) | ![Login](docs/screenshots/LoginPage.png) | ![Register](docs/screenshots/RegisterPage.png) |
+
+### App
+
+| Dashboard | Threat Feed |
+|---|---|
+| ![Dashboard](docs/screenshots/Dashboard.png) | ![Threat Feed](docs/screenshots/ThreatFeed.png) |
+
+| Alerts | Watchlist |
+|---|---|
+| ![Alerts](docs/screenshots/Alerts.png) | ![Watchlist](docs/screenshots/Watchlist.png) |
+
+![Settings](docs/screenshots/Settings.png)
+
+---
+
 ## Implementation Progress
 
 ### Backend
@@ -103,11 +128,19 @@ PUT /api/user/preferences
 - [ ] Production deployment on Railway
 
 ### Frontend
-- [ ] Vue 3 + Quasar dashboard
-- [ ] Threat feed with filters
-- [ ] Alert rules management
+- [x] Design system — CSS tokens, typography, dark theme
+- [x] Landing page, login, register
+- [x] App layout — sidebar, navigation, top bar
+- [x] Dashboard with stat cards and recent threats table
+- [x] Threat feed with filters and split-panel detail view
+- [x] Threat detail page — CVSS score, affected tech, timeline
+- [x] Semantic search page (UI only)
+- [x] Alert rules — list, create, edit
+- [x] Watchlist page
+- [x] Settings — profile, tech stack, notification preferences
+- [ ] Connect to backend REST API (replace mock data)
+- [ ] JWT auth flow (login → store token → API interceptor)
 - [ ] Real-time WebSocket updates
-- [ ] Login/register pages
 
 ---
 
