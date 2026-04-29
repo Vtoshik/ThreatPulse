@@ -32,10 +32,10 @@
             variant="primary"
             size="md"
             style="width:100%; margin-top:4px"
-            :disabled="loading"
+            :disabled="authStore.isLoading"
             @click="handleLogin"
           >
-            {{ loading ? 'Signing in...' : 'Sign in →' }}
+            {{ authStore.isLoading ? 'Signing in...' : 'Sign in →' }}
           </AppButton>
 
           <div class="auth-form__divider" />
@@ -60,17 +60,26 @@ import { useRouter } from 'vue-router'
 import MonoLabel from 'src/components/MonoLabel.vue'
 import AppInput from 'src/components/AppInput.vue'
 import AppButton from 'src/components/AppButton.vue'
+import { useAuthStore } from 'src/stores/auth'
+import { useQuasar } from 'quasar'
 
 const router  = useRouter()
 const email   = ref('viktor@example.com')
 const password = ref('')
-const loading = ref(false)
+const authStore = useAuthStore();
+const $q = useQuasar();
 
 async function handleLogin() {
-  loading.value = true
-  await new Promise(r => setTimeout(r, 800))
-  loading.value = false
-  void router.push('/app/dashboard')
+  try {
+    await authStore.login(email.value, password.value);
+    router.push('/app/dashboard')
+  } catch (err) {
+    $q.notify({
+      type: 'negative',
+      message: 'Wrong email or password',
+      position: 'top',
+    })
+  }
 }
 </script>
 
