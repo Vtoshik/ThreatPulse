@@ -23,5 +23,29 @@ export interface Threat {
   complexity?: string
   auth?: string
   source?: string
+  sourceUrl?: string
+  sourceName?: string
+  publishedAt?: string
   timeline?: ThreatTimeline[]
+}
+
+export interface ApiThreat {
+  id: number
+  externalId: string
+  title: string
+  aiSummary?: string | null
+  severity: Severity
+  threatCategory?: ThreatCategory | null
+  sourceName: string
+  sourceUrl: string
+  publishedAt: string
+  affectedTechnologies: string[]
+}
+
+export interface ApiThreatPage {
+  threats: ApiThreat[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
 }

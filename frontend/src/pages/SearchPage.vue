@@ -3,16 +3,16 @@
     <PageTitle title="Semantic" sub="search" />
 
     <!-- Search bar -->
-    <div class="search-bar">
-      <AppInput
-        v-model="query"
-        placeholder='e.g. "kafka authentication" or "RCE spring"'
-        style="font-size:14px; padding:10px 14px"
+  <div class="search-bar">
+    <AppInput
+      v-model="query"
+      placeholder='e.g. "kafka authentication" or "RCE spring"'
+      style="font-size:14px; padding:10px 14px"
         @keydown.enter="doSearch"
       />
       <AppButton variant="primary" size="md" @click="doSearch">Search</AppButton>
     </div>
-    <div class="search-hint">Powered by pgvector semantic search · HuggingFace embeddings</div>
+    <div class="search-hint">Powered by backend threat search · live API results</div>
 
     <!-- Recent searches (before first search) -->
     <template v-if="!searched">
@@ -21,7 +21,7 @@
         v-for="q in RECENT_QUERIES"
         :key="q"
         class="recent-item"
-        @click="query = q"
+        @click="query = q; void doSearch()"
         @mouseenter="(e) => ((e.currentTarget as HTMLElement).style.background = 'var(--tp-surf2)')"
         @mouseleave="(e) => ((e.currentTarget as HTMLElement).style.background = 'transparent')"
       >
@@ -32,7 +32,21 @@
 
     <!-- No results -->
     <EmptyState
-      v-else-if="results.length === 0"
+      v-else-if="isLoading"
+      icon="⌛"
+      title="Searching..."
+      desc="Waiting for results from the backend."
+    />
+
+    <EmptyState
+      v-else-if="loadError"
+      icon="!"
+      title="Could not run search"
+      :desc="loadError"
+    />
+
+    <EmptyState
+      v-else-if="searched && results.length === 0"
       icon="⌕"
       title="No results found"
       :desc="`No threats matched &quot;${query}&quot;. Try different keywords or check spelling.`"
@@ -72,8 +86,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Threat } from 'src/types/threat'
-import { THREATS } from 'src/data/mockData'
 import { useSeverity } from 'src/composables/useSeverity'
+import { threatService } from 'src/services/threats.service'
 import PageTitle from 'src/components/PageTitle.vue'
 import AppInput from 'src/components/AppInput.vue'
 import AppButton from 'src/components/AppButton.vue'
@@ -91,16 +105,35 @@ const RECENT_QUERIES = ['spring boot deserialization', 'kafka auth bypass', 'doc
 const query   = ref('')
 const results = ref<Threat[]>([])
 const searched = ref(false)
+const isLoading = ref(false)
+const loadError = ref('')
 
-function doSearch() {
+async function doSearch() {
   searched.value = true
-  const q = query.value.toLowerCase()
-  results.value = THREATS.filter(t =>
-    t.title.toLowerCase().includes(q) ||
-    t.cve.toLowerCase().includes(q) ||
-    t.tech.toLowerCase().includes(q) ||
-    (t.summary ?? '').toLowerCase().includes(q)
-  )
+
+  if (!query.value.trim()) {
+    results.value = []
+    loadError.value = ''
+    return
+  }
+
+  isLoading.value = true
+  loadError.value = ''
+
+  try {
+    const data = await threatService.searchThreats(query.value, {
+      page: 0,
+      size: 20,
+    })
+
+    results.value = data.threats
+  } catch (error) {
+    console.error(error)
+    loadError.value = 'The backend search endpoint is unavailable. Check that the Spring app is running on port 8080.'
+    results.value = []
+  } finally {
+    isLoading.value = false
+  }
 }
 
 function openDetail(id: string) {

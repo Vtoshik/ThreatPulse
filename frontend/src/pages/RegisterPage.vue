@@ -31,7 +31,7 @@
               <MonoLabel style="display:block; margin-bottom:6px">Password</MonoLabel>
               <AppInput v-model="form.password" placeholder="min 8 characters" type="password" />
             </div>
-            <AppButton variant="primary" size="md" style="width:100%; margin-top:4px" @click="step = 2">
+            <AppButton variant="primary" size="md" style="width:100%; margin-top:4px" @click="goToStep2()">
               Continue → Set up stack
             </AppButton>
           </div>
@@ -84,7 +84,10 @@
               <AppButton variant="ghost" size="sm" @click="addCustom">Add</AppButton>
             </div>
 
-            <AppButton variant="primary" size="md" style="width:100%; margin-top:4px" @click="handleRegister">
+            <AppButton 
+              variant="primary" size="md" style="width:100%; 
+              margin-top:4px" @click="handleRegister"
+              :disabled="authStore.isLoading">
               Start monitoring →
             </AppButton>
           </div>
@@ -105,8 +108,12 @@ import MonoLabel from 'src/components/MonoLabel.vue'
 import AppInput from 'src/components/AppInput.vue'
 import AppButton from 'src/components/AppButton.vue'
 import AppTag from 'src/components/AppTag.vue'
+import { useAuthStore } from 'src/stores/auth'
+import { useQuasar } from 'quasar'
 
 const router = useRouter()
+const authStore = useAuthStore()
+const $q = useQuasar()
 
 const step = ref(1)
 const form = ref({ name: '', email: '', password: '' })
@@ -129,9 +136,30 @@ function addCustom() {
   if (t) { addStack(t); stackInput.value = '' }
 }
 
+function goToStep2() {                                     
+  if (!form.value.name || !form.value.email || !form.value.password) {
+    $q.notify({ type: 'warning', message: 'Please fill all fields' })                         
+    return
+  }                                                                                           
+  step.value = 2                                           
+}
+
 async function handleRegister() {
-  await new Promise(r => setTimeout(r, 600))
-  void router.push('/app/dashboard')
+  try {
+    await authStore.register(
+      form.value.name,
+      form.value.email,
+      form.value.password,
+      stack.value
+    )
+    router.replace('/app/dashboard')
+  } catch (err) {
+    $q.notify({
+      type: 'negative',
+      message: 'Registration failed',
+      position: 'top',
+    })
+  }
 }
 </script>
 

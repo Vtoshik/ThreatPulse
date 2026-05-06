@@ -1,8 +1,6 @@
 <template>
-  <div class="feed-layout">
-    <!-- Left: list -->
+  <div class="feed-layout tp-fade-in">
     <div class="feed-list">
-      <!-- Filter bar -->
       <div class="feed-filters">
         <div class="filter-tabs">
           <button
@@ -12,73 +10,68 @@
             :class="{ 'filter-tab--active': activeFilter === f }"
             @click="activeFilter = f"
           >
-            {{ f === 'ALL' ? `All (${THREATS.length})` : f }}
+            {{ f === 'ALL' ? `All (${filteredCount})` : `${f} (${severityCounts[f]})` }}
           </button>
         </div>
+
+        <span class="feed-filters__note">
+          Loaded from `/api/threats` and filtered locally by severity.
+        </span>
       </div>
 
-      <!-- Table header -->
       <div class="feed-table-header">
         <MonoLabel v-for="h in TABLE_HEADERS" :key="h">{{ h }}</MonoLabel>
       </div>
 
-      <!-- Rows -->
       <div class="feed-rows">
+        <div v-if="isLoading" class="feed-loading">
+          <MonoLabel>Loading threats from backend...</MonoLabel>
+        </div>
+
         <EmptyState
-          v-if="filtered.length === 0"
+          v-else-if="loadError"
+          icon="!"
+          title="Could not load threats"
+          :desc="loadError"
+        />
+
+        <EmptyState
+          v-else-if="filteredThreats.length === 0"
           icon="◌"
           title="No threats match this filter"
-          desc="Try selecting a different severity level or checking back later."
+          desc="Try selecting a different severity level or check back later."
         />
+
         <ThreatRow
-          v-for="t in filtered"
+          v-for="(t, index) in filteredThreats"
+          v-else
           :key="t.id"
           :threat="t"
           :selected="selected?.id === t.id"
+          :first="index === 0"
           @click="selected = t"
         />
       </div>
     </div>
 
-    <!-- Right: detail panel -->
     <aside v-if="selected" class="feed-detail">
       <div class="feed-detail__header">
         <MonoLabel>Selected Threat</MonoLabel>
       </div>
+
       <div class="feed-detail__body">
         <SeverityBadge :severity="selected.severity" />
         <div class="feed-detail__title">{{ selected.title }}</div>
         <div class="feed-detail__cve">{{ selected.cve }}</div>
 
-        <!-- Score -->
-        <div class="feed-detail__score-row">
-          <MonoLabel>CVSS</MonoLabel>
-          <span class="feed-detail__score-value" :style="{ color: sevColor(selected.severity) }">
-            {{ selected.score }}
-          </span>
-        </div>
-        <div class="feed-detail__score-bar">
-          <div
-            class="feed-detail__score-fill"
-            :style="{ width: `${(selected.score / 10) * 100}%`, background: sevColor(selected.severity) }"
-          />
-        </div>
-
-        <p class="feed-detail__summary">{{ selected.summary?.slice(0, 160) }}...</p>
-
-        <div v-if="selected.patch" class="feed-detail__patch">
-          <MonoLabel style="display:block; margin-bottom:4px">Patch</MonoLabel>
-          <div class="feed-detail__patch-text">{{ selected.patch.split('.')[0] }}.</div>
-        </div>
+        <p class="feed-detail__summary">
+          {{ selected.summary || 'No AI summary is available for this threat yet.' }}
+        </p>
 
         <div class="feed-detail__meta">
-          <div
-            v-for="[k, v] in metaRows"
-            :key="k"
-            class="feed-detail__meta-row"
-          >
-            <MonoLabel>{{ k }}</MonoLabel>
-            <span class="feed-detail__meta-val">{{ v }}</span>
+          <div v-for="[label, value] in metaRows" :key="label" class="feed-detail__meta-row">
+            <MonoLabel>{{ label }}</MonoLabel>
+            <span class="feed-detail__meta-val">{{ value }}</span>
           </div>
         </div>
 
@@ -96,11 +89,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Threat } from 'src/types/threat'
-import { THREATS } from 'src/data/mockData'
-import { useSeverity } from 'src/composables/useSeverity'
+import type { Severity, Threat } from 'src/types/threat'
+import { threatService } from 'src/services/threats.service'
 import MonoLabel from 'src/components/MonoLabel.vue'
 import ThreatRow from 'src/components/ThreatRow.vue'
 import SeverityBadge from 'src/components/SeverityBadge.vue'
@@ -108,31 +100,91 @@ import EmptyState from 'src/components/EmptyState.vue'
 import AppButton from 'src/components/AppButton.vue'
 
 const router = useRouter()
-const { sevColor } = useSeverity()
 
 const FILTERS = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const
-const TABLE_HEADERS = ['Vulnerability', 'Severity', 'Technology', 'CVSS Score', 'Age']
+const TABLE_HEADERS = ['Vulnerability', 'Severity', 'Technology', 'Risk', 'Age']
 
-const activeFilter = ref<string>('ALL')
-const selected = ref<Threat | null>(THREATS[0] ?? null)
+const isLoading = ref(false)
+const loadError = ref('')
+const selected = ref<Threat | null>(null)
+const activeFilter = ref<(typeof FILTERS)[number]>('ALL')
+const threats = ref<Threat[]>([])
 
-const filtered = computed(() =>
+const filteredThreats = computed(() =>
   activeFilter.value === 'ALL'
-    ? THREATS
-    : THREATS.filter(t => t.severity === activeFilter.value)
+    ? threats.value
+    : threats.value.filter((threat) => threat.severity === activeFilter.value)
 )
 
-const metaRows = computed(() => selected.value
-  ? [
-      ['Vector',     selected.value.vector     ?? '—'],
-      ['Complexity', selected.value.complexity  ?? '—'],
-      ['Auth',       selected.value.auth        ?? '—'],
-    ]
-  : []
-)
+const filteredCount = computed(() => filteredThreats.value.length)
+
+const severityCounts = computed<Record<Severity, number>>(() => {
+  const counts = {
+    CRITICAL: 0,
+    HIGH: 0,
+    MEDIUM: 0,
+    LOW: 0,
+    INFO: 0,
+  }
+
+  for (const threat of threats.value) {
+    if (threat.severity in counts) {
+      counts[threat.severity] += 1
+    }
+  }
+
+  return counts
+})
+
+const metaRows = computed(() => {
+  if (!selected.value) return []
+
+  return [
+    ['Source', selected.value.sourceName || selected.value.source || '—'],
+    ['Category', selected.value.category ?? '—'],
+    ['Published', selected.value.published],
+    ['Technologies', selected.value.affected?.length ? selected.value.affected.join(', ') : '—'],
+  ]
+})
+
+watch(filteredThreats, (items) => {
+  if (items.length === 0) {
+    selected.value = null
+    return
+  }
+
+  const stillVisible = selected.value && items.some((item) => item.id === selected.value?.id)
+  if (!stillVisible) {
+    selected.value = items[0] ?? null
+  }
+}, { immediate: true })
+
+onMounted(fetchThreats)
+
+async function fetchThreats() {
+  isLoading.value = true
+  loadError.value = ''
+
+  try {
+    const data = await threatService.getThreats({
+      page: 0,
+      size: 100,
+      sort: 'publishedAt,desc',
+    })
+
+    threats.value = data.threats
+  } catch (error) {
+    console.error(error)
+    loadError.value = 'The backend API is not responding. Check that the Spring app is running on port 8080.'
+  } finally {
+    isLoading.value = false
+  }
+}
 
 function openDetail() {
-  if (selected.value) void router.push(`/app/threats/${selected.value.id}`)
+  if (selected.value) {
+    void router.push(`/app/threats/${selected.value.id}`)
+  }
 }
 </script>
 
@@ -155,6 +207,15 @@ function openDetail() {
   box-shadow: inset 0 -1px 0 var(--tp-border);
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.feed-filters__note {
+  font-size: 10px;
+  color: var(--tp-muted);
+  font-family: var(--tp-mono);
+  white-space: nowrap;
 }
 
 .filter-tabs {
@@ -202,7 +263,10 @@ function openDetail() {
   overflow: auto;
 }
 
-/* Right panel */
+.feed-loading {
+  padding: 20px;
+}
+
 .feed-detail {
   width: 280px;
   background: var(--tp-surface);
@@ -239,71 +303,34 @@ function openDetail() {
   font-family: var(--tp-mono);
   font-size: 10px;
   color: var(--tp-muted);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   letter-spacing: 0.3px;
-}
-
-.feed-detail__score-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 6px;
-}
-
-.feed-detail__score-value {
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -1.2px;
-}
-
-.feed-detail__score-bar {
-  height: 2px;
-  background: var(--tp-surf3);
-  border-radius: 1px;
-  margin-bottom: 16px;
-}
-
-.feed-detail__score-fill {
-  height: 100%;
-  border-radius: 1px;
 }
 
 .feed-detail__summary {
   font-size: 12px;
   color: var(--tp-sec);
-  line-height: 1.65;
-  margin-bottom: 14px;
-}
-
-.feed-detail__patch {
-  padding: 10px 12px;
-  background: var(--tp-surf2);
-  border-radius: 6px;
-  box-shadow: var(--tp-sb);
-  margin-bottom: 14px;
-}
-
-.feed-detail__patch-text {
-  font-family: var(--tp-mono);
-  font-size: 11px;
-  color: var(--tp-text);
-  line-height: 1.5;
+  line-height: 1.7;
+  margin: 0 0 16px;
 }
 
 .feed-detail__meta {
-  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
 .feed-detail__meta-row {
   display: flex;
   justify-content: space-between;
-  padding: 5px 0;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  gap: 12px;
 }
 
 .feed-detail__meta-val {
   font-size: 11px;
   color: var(--tp-sec);
-  font-family: var(--tp-mono);
+  text-align: right;
+  line-height: 1.5;
 }
 </style>

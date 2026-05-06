@@ -1,140 +1,164 @@
 <template>
   <div class="page-pad tp-fade-in">
-    <!-- Back -->
-    <div class="detail-back">
-      <span class="detail-back__link" @click="$router.push('/app/feed')">← Back to feed</span>
-      <span class="detail-back__dot">·</span>
-      <span class="detail-back__cve">{{ threat.cve }}</span>
+    <div v-if="isLoading" class="detail-state">
+      <MonoLabel>Loading threat details...</MonoLabel>
     </div>
 
-    <!-- Title row -->
-    <div class="detail-title-row">
-      <div class="detail-title-left">
-        <div class="detail-title-meta">
-          <SeverityBadge :severity="threat.severity" />
-          <MonoLabel>{{ threat.source }}</MonoLabel>
+    <EmptyState
+      v-else-if="loadError"
+      icon="!"
+      title="Could not load threat"
+      :desc="loadError"
+    />
+
+    <template v-else-if="threat">
+      <div class="detail-back">
+        <span class="detail-back__link" @click="$router.push('/app/feed')">← Back to feed</span>
+        <span class="detail-back__dot">·</span>
+        <span class="detail-back__cve">{{ threat.cve }}</span>
+      </div>
+
+      <div class="detail-title-row">
+        <div class="detail-title-left">
+          <div class="detail-title-meta">
+            <SeverityBadge :severity="threat.severity" />
+            <MonoLabel>{{ threat.sourceName || threat.source || 'API' }}</MonoLabel>
+          </div>
+          <h1 class="detail-h1">{{ threat.title }}</h1>
+          <CveHash :cve="threat.cve" :id="threat.id" />
         </div>
-        <h1 class="detail-h1">{{ threat.title }}</h1>
-        <CveHash :cve="threat.cve" :id="threat.id" />
+
+        <div class="detail-score-card" :style="{ boxShadow: `${sevColor(threat.severity)}40 0 0 0 1px, rgba(0,0,0,.4) 0 4px 16px` }">
+          <MonoLabel style="display:block; margin-bottom:4px">Risk</MonoLabel>
+          <div class="detail-score-value" :style="{ color: sevColor(threat.severity) }">{{ threat.score }}</div>
+          <div class="detail-score-sub">/ 10.0</div>
+        </div>
       </div>
 
-      <div class="detail-score-card" :style="{ boxShadow: `${sevColor(threat.severity)}40 0 0 0 1px, rgba(0,0,0,.4) 0 4px 16px` }">
-        <MonoLabel style="display:block; margin-bottom:4px">CVSS</MonoLabel>
-        <div class="detail-score-value" :style="{ color: sevColor(threat.severity) }">{{ threat.score }}</div>
-        <div class="detail-score-sub">/ 10.0</div>
-      </div>
-    </div>
-
-    <!-- Two-column grid -->
-    <div class="detail-grid">
-      <!-- Left column -->
-      <div class="detail-left">
-        <!-- AI Summary -->
-        <AppCard style="padding:20px">
-          <div class="detail-section-header">
-            <MonoLabel>AI Summary</MonoLabel>
-            <span class="detail-model-tag">Llama 3.3 70B</span>
-          </div>
-          <p class="detail-summary">{{ threat.summary }}</p>
-        </AppCard>
-
-        <!-- Affected versions -->
-        <AppCard style="padding:20px">
-          <MonoLabel style="display:block; margin-bottom:14px">Affected Versions</MonoLabel>
-          <div
-            v-for="v in (threat.affected ?? [])"
-            :key="v"
-            class="affected-row"
-          >
-            <span class="affected-dot" />
-            <span class="affected-label">{{ v }}</span>
-          </div>
-        </AppCard>
-
-        <!-- Patch -->
-        <AppCard style="padding:20px">
-          <MonoLabel style="display:block; margin-bottom:14px">Recommended Fix</MonoLabel>
-          <div class="patch-box">
-            <p class="patch-text">{{ threat.patch }}</p>
-          </div>
-        </AppCard>
-      </div>
-
-      <!-- Right column -->
-      <div class="detail-right">
-        <!-- Metadata -->
-        <AppCard style="padding:16px">
-          <MonoLabel style="display:block; margin-bottom:12px">Details</MonoLabel>
-          <div
-            v-for="[k, v] in metaRows"
-            :key="k"
-            class="meta-row"
-          >
-            <MonoLabel>{{ k }}</MonoLabel>
-            <span class="meta-val">{{ v }}</span>
-          </div>
-        </AppCard>
-
-        <!-- Timeline -->
-        <AppCard style="padding:16px">
-          <MonoLabel style="display:block; margin-bottom:12px">Timeline</MonoLabel>
-          <div
-            v-for="(e, i) in (threat.timeline ?? [])"
-            :key="i"
-            class="timeline-item"
-          >
-            <div class="timeline-track">
-              <div
-                class="timeline-dot"
-                :style="{ background: i === 0 ? sevColor(threat.severity) : 'var(--tp-dimmer)' }"
-              />
-              <div v-if="i < (threat.timeline?.length ?? 0) - 1" class="timeline-line" />
+      <div class="detail-grid">
+        <div class="detail-left">
+          <AppCard style="padding:20px">
+            <div class="detail-section-header">
+              <MonoLabel>AI Summary</MonoLabel>
+              <span class="detail-model-tag">Backend response</span>
             </div>
-            <div class="timeline-content">
-              <div class="timeline-time">{{ e.t }}</div>
-              <div class="timeline-event">{{ e.e }}</div>
-            </div>
-          </div>
-        </AppCard>
+            <p class="detail-summary">
+              {{ threat.summary || 'No AI summary is available for this threat yet.' }}
+            </p>
+          </AppCard>
 
-        <AppButton variant="ghost" size="sm" style="width:100%">
-          ↗ View on NVD
-        </AppButton>
+          <AppCard style="padding:20px">
+            <MonoLabel style="display:block; margin-bottom:14px">Affected Technologies</MonoLabel>
+            <div v-if="affectedTechnologies.length" class="affected-list">
+              <div v-for="tech in affectedTechnologies" :key="tech" class="affected-row">
+                <span class="affected-dot" />
+                <span class="affected-label">{{ tech }}</span>
+              </div>
+            </div>
+            <div v-else class="detail-empty-inline">
+              <MonoLabel>No affected technologies returned by the API</MonoLabel>
+            </div>
+          </AppCard>
+        </div>
+
+        <div class="detail-right">
+          <AppCard style="padding:16px">
+            <MonoLabel style="display:block; margin-bottom:12px">Details</MonoLabel>
+            <div v-for="[k, v] in metaRows" :key="k" class="meta-row">
+              <MonoLabel>{{ k }}</MonoLabel>
+              <span class="meta-val">{{ v }}</span>
+            </div>
+          </AppCard>
+
+          <AppCard style="padding:16px">
+            <MonoLabel style="display:block; margin-bottom:12px">Source</MonoLabel>
+            <div class="source-box">
+              <div class="source-name">{{ threat.sourceName }}</div>
+              <div class="source-url">{{ threat.sourceUrl }}</div>
+            </div>
+          </AppCard>
+
+          <AppButton variant="ghost" size="sm" style="width:100%" @click="openSource">
+            ↗ Open source page
+          </AppButton>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { THREATS } from 'src/data/mockData'
+import type { Threat } from 'src/types/threat'
+import { threatService } from 'src/services/threats.service'
 import { useSeverity } from 'src/composables/useSeverity'
 import SeverityBadge from 'src/components/SeverityBadge.vue'
 import MonoLabel from 'src/components/MonoLabel.vue'
 import CveHash from 'src/components/CveHash.vue'
 import AppCard from 'src/components/AppCard.vue'
 import AppButton from 'src/components/AppButton.vue'
+import EmptyState from 'src/components/EmptyState.vue'
 
 const route = useRoute()
 const { sevColor } = useSeverity()
 
-const threat = computed(() =>
-  THREATS.find(t => t.id === route.params['id']) ?? THREATS[0]!
+const threat = ref<Threat | null>(null)
+const isLoading = ref(false)
+const loadError = ref('')
+
+const affectedTechnologies = computed(() => threat.value?.affected ?? [])
+
+const metaRows = computed(() => {
+  if (!threat.value) return []
+
+  return [
+    ['Source', threat.value.sourceName || threat.value.source || '—'],
+    ['Category', threat.value.category ?? '—'],
+    ['Published', threat.value.published],
+    ['Age', threat.value.age],
+    ['Technologies', affectedTechnologies.value.length ? affectedTechnologies.value.join(', ') : '—'],
+  ]
+})
+
+watch(
+  () => route.params.id,
+  async (id) => {
+    if (!id) return
+    await fetchThreat(String(id))
+  },
+  { immediate: true }
 )
 
-const metaRows = computed(() => [
-  ['Technology',    threat.value.tech],
-  ['Attack Vector', threat.value.vector    ?? '—'],
-  ['Complexity',    threat.value.complexity ?? '—'],
-  ['Auth required', threat.value.auth       ?? '—'],
-  ['Published',     threat.value.published],
-])
+async function fetchThreat(id: string) {
+  isLoading.value = true
+  loadError.value = ''
+
+  try {
+    threat.value = await threatService.getThreatById(id)
+  } catch (error) {
+    console.error(error)
+    loadError.value = 'The backend API could not return this threat. Check the id and ensure the Spring app is running.'
+    threat.value = null
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function openSource() {
+  if (threat.value?.sourceUrl) {
+    window.open(threat.value.sourceUrl, '_blank', 'noopener,noreferrer')
+  }
+}
 </script>
 
 <style scoped>
 .page-pad {
   padding: 24px 28px;
+}
+
+.detail-state {
+  padding: 32px 0;
 }
 
 .detail-back {
@@ -254,97 +278,70 @@ const metaRows = computed(() => [
   margin: 0;
 }
 
+.affected-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .affected-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 0;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .affected-dot {
-  width: 4px;
-  height: 4px;
-  background: var(--tp-crit);
-  border-radius: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--tp-dimmer);
   flex-shrink: 0;
-  transform: rotate(45deg);
 }
 
 .affected-label {
-  font-family: var(--tp-mono);
-  font-size: 12px;
-  color: var(--tp-text);
-}
-
-.patch-box {
-  padding: 12px 14px;
-  background: var(--tp-surf2);
-  border-radius: 6px;
-  box-shadow: var(--tp-sb);
-}
-
-.patch-text {
   font-size: 12px;
   color: var(--tp-sec);
-  line-height: 1.7;
-  margin: 0;
-  font-family: var(--tp-mono);
+  line-height: 1.5;
+}
+
+.detail-empty-inline {
+  padding: 4px 0;
 }
 
 .meta-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  gap: 12px;
   padding: 7px 0;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.meta-row + .meta-row {
+  box-shadow: inset 0 1px 0 var(--tp-border);
 }
 
 .meta-val {
   font-size: 11px;
   color: var(--tp-sec);
-  font-family: var(--tp-mono);
   text-align: right;
-  max-width: 120px;
+  line-height: 1.5;
 }
 
-.timeline-item {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-  align-items: flex-start;
-}
-
-.timeline-track {
+.source-box {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-.timeline-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  margin-top: 4px;
-  flex-shrink: 0;
+.source-name {
+  font-size: 12px;
+  color: var(--tp-text);
+  font-weight: 500;
 }
 
-.timeline-line {
-  width: 1px;
-  height: 16px;
-  background: var(--tp-surf3);
-}
-
-.timeline-time {
-  font-family: var(--tp-mono);
-  font-size: 10px;
-  color: var(--tp-muted);
-  margin-bottom: 1px;
-}
-
-.timeline-event {
+.source-url {
   font-size: 11px;
-  color: var(--tp-sec);
+  color: var(--tp-muted);
+  line-height: 1.5;
+  word-break: break-word;
 }
 </style>

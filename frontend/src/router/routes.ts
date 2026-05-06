@@ -17,6 +17,10 @@ const routes: RouteRecordRaw[] = [
     path: '/app',
     component: () => import('layouts/AppLayout.vue'),
     redirect: '/app/dashboard',
+    beforeEnter: (to, from, next) => {
+        const token = localStorage.getItem("token");
+        token ? next() : next('/login');
+    },
     children: [
       {
         path: 'dashboard',
