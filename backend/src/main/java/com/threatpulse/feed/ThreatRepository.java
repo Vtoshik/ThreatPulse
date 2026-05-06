@@ -5,6 +5,7 @@ import com.threatpulse.common.domain.Threat;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Optional;
 
@@ -14,7 +15,7 @@ import java.util.Optional;
  * Extends JpaRepository to provide CRUD operations and defines
  * custom query methods for sorting and filtering threats.
  */
-public interface ThreatRepository extends JpaRepository<Threat, Long> {
+public interface ThreatRepository extends JpaRepository<Threat, Long>, JpaSpecificationExecutor<Threat> {
     Page<Threat> findAllByOrderByCollectedAtDesc(Pageable pageable);
     Page<Threat> findBySeverityOrderByCollectedAtDesc(Severity severity, Pageable pageable);
     boolean existsByExternalId(String externalId);

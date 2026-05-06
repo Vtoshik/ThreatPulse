@@ -1,12 +1,21 @@
 <template>
   <div class="page-pad tp-fade-in">
     <PageTitle title="Dashboard" :sub="todaySub" />
-
+ 
     <!-- Stat cards -->
-    <div class="stat-grid">
-      <AppCard v-for="s in STATS" :key="s.label" style="padding: 18px 20px">
+
+    <div v-if="isLoadingStats" class="stat-grid">
+      <AppCard v-for="i in 4" :key="i" style="padding: 18px 20px; opacity: 0.5">
+        <MonoLabel>Loading...</MonoLabel>
+      </AppCard>
+    </div>
+
+    <div v-else class="stat-grid">
+      <AppCard v-for="s in stats" :key="s.label" style="padding: 18px 20px">
         <MonoLabel style="display:block; margin-bottom:10px">{{ s.label }}</MonoLabel>
-        <div class="stat-value" :style="{ color: sevColor(s.severity) }">{{ s.value }}</div>
+        <div class="stat-value" :style="{ color: sevColor(s.severity) }">
+          {{ s.value }}
+        </div>
       </AppCard>
     </div>
 
@@ -19,25 +28,38 @@
 
     <!-- Threats table -->
     <AppCard style="overflow:hidden">
-      <div class="table-header">
-        <MonoLabel v-for="h in TABLE_HEADERS" :key="h">{{ h }}</MonoLabel>
+      <div v-if="isLoadingThreats" style="padding: 20px; opacity: 0.6">
+        <MonoLabel>Loading threats...</MonoLabel>
       </div>
-      <ThreatRow
-        v-for="(threat, i) in recentThreats"
-        :key="threat.id"
-        :threat="threat"
-        :first="i === 0"
-        @click="openDetail(threat.id)"
-      />
+      <template v-else>
+        <div v-if="recentThreats.length === 0" style="padding: 20px">
+          <MonoLabel>No threats found</MonoLabel>
+        </div>
+
+        <template v-else>
+          <div class="table-header">
+            <MonoLabel v-for="h in TABLE_HEADERS" :key="h">{{ h }}</MonoLabel>
+          </div>
+
+          <ThreatRow
+            v-for="(threat, i) in recentThreats"
+            :key="threat.id"
+            :threat="threat"
+            :first="i === 0"
+            @click="openDetail(threat.id)"
+          />
+        </template>
+      </template>
     </AppCard>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { threatService } from 'src/services/threats.service'
 import { useRouter } from 'vue-router'
 import { useSeverity } from 'src/composables/useSeverity'
-import { THREATS } from 'src/data/mockData'
+import type { Severity, Threat } from 'src/types/threat'
 import PageTitle from 'src/components/PageTitle.vue'
 import AppCard from 'src/components/AppCard.vue'
 import MonoLabel from 'src/components/MonoLabel.vue'
@@ -46,21 +68,52 @@ import ThreatRow from 'src/components/ThreatRow.vue'
 const router = useRouter()
 const { sevColor } = useSeverity()
 
-const STATS = [
-  { label: 'Critical',    value: 3,  severity: 'CRITICAL' },
-  { label: 'High',        value: 12, severity: 'HIGH'     },
-  { label: 'Medium',      value: 28, severity: 'MEDIUM'   },
-  { label: 'Watching',    value: 5,  severity: 'LOW'      },
-]
-
+const recentThreats = ref<Threat[]>([])
+const stats = ref<Array<{ label: string; value: number; severity: Severity }>>([])
+const isLoadingStats = ref(false)
+const isLoadingThreats = ref(false)
 const TABLE_HEADERS = ['Vulnerability', 'Severity', 'Technology', 'CVSS', 'Age']
 
+const todayCount = ref(0) 
 const todaySub = computed(() => {
-  const d = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-  return `${d} · 47 threats today`
+  const d = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
+
+  return `${d} · ${todayCount.value} threats today`
 })
 
-const recentThreats = computed(() => THREATS.slice(0, 3))
+onMounted(async () => {
+  try {
+    isLoadingStats.value = true
+    isLoadingThreats.value = true
+
+    const [threatsData, statsData] = await Promise.all([
+      threatService.getRecentThreats(),
+      threatService.getStats()
+    ])
+
+    recentThreats.value = threatsData
+
+    stats.value = [
+      { label: 'Critical', value: statsData.critical, severity: 'CRITICAL' },
+      { label: 'High', value: statsData.high, severity: 'HIGH' },
+      { label: 'Medium', value: statsData.medium, severity: 'MEDIUM' },
+      { label: 'Watching', value: statsData.low, severity: 'LOW' },
+    ]
+
+    todayCount.value = statsData.todayCount ?? 0
+
+
+  } catch (err) {
+    console.error(err)
+  } finally {
+    isLoadingStats.value = false
+    isLoadingThreats.value = false
+  }
+})
 
 function openDetail(id: string) {
   void router.push(`/app/threats/${id}`)

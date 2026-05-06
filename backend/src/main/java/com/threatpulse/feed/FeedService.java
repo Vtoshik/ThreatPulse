@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -31,8 +33,25 @@ public class FeedService {
      * @return paginated threat response
      */
     public ThreatPageResponse getThreats(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Threat> threatPage = threatRepository.findAllByOrderByCollectedAtDesc(pageable);
+        return getThreats(page, size, null, null);
+    }
+
+    /**
+     * Retrieves a paginated list of threats filtered by severity and search query.
+     *
+     * @param page page number
+     * @param size page size
+     * @param severity optional severity filter
+     * @param query optional search text
+     * @return paginated threat response
+     */
+    public ThreatPageResponse getThreats(int page, int size, com.threatpulse.common.domain.Severity severity, String query) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "collectedAt"));
+        Specification<Threat> specification = Specification
+                .where(ThreatSpecifications.withSeverity(severity))
+                .and(ThreatSpecifications.matchesQuery(query));
+
+        Page<Threat> threatPage = threatRepository.findAll(specification, pageable);
 
         List<ThreatResponse> threats = threatPage.getContent().stream()
                 .map(this::toResponse).toList();

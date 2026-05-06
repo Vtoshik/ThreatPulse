@@ -29,8 +29,27 @@ public class FeedController {
     @GetMapping
     public ResponseEntity<ThreatPageResponse> getThreats(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(feedService.getThreats(page, size));
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) com.threatpulse.common.domain.Severity severity,
+            @RequestParam(required = false) String q) {
+        return ResponseEntity.ok(feedService.getThreats(page, size, severity, q));
+    }
+
+    /**
+     * Searches threats by text query.
+     *
+     * @param q search text
+     * @param page page number
+     * @param size page size
+     * @return paginated threat response
+     */
+    @GetMapping("/search")
+    public ResponseEntity<ThreatPageResponse> searchThreats(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) com.threatpulse.common.domain.Severity severity) {
+        return ResponseEntity.ok(feedService.getThreats(page, size, severity, q));
     }
 
     /**
