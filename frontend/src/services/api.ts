@@ -1,11 +1,12 @@
-import axios, { InternalAxiosRequestConfig } from "axios";
+import axios from "axios";
+import type { InternalAxiosRequestConfig } from "axios";
 import { router } from "src/router";
 
 const axiosInstanse = axios.create({
     baseURL: 'http://localhost:8080'
 });
 
-axiosInstanse.interceptors.request.use( 
+axiosInstanse.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
         const token = localStorage.getItem('token');
 
@@ -14,20 +15,20 @@ axiosInstanse.interceptors.request.use(
         }
 
         return config;
-    }, (error) => {
+    }, (error: Error) => {
         return Promise.reject(error);
     }
 );
 
-axiosInstanse.interceptors.response.use( 
+axiosInstanse.interceptors.response.use(
     (response) => response,
-    async(error) => {
+    async (error: { response?: { status: number } }) => {
         if (error.response && error.response.status === 401) {
             localStorage.removeItem("token");
-            router?.push("/login")
+            void router?.push("/login")
         }
 
-        return Promise.reject(error);
+        return Promise.reject(new Error(String(error)));
     }
 );
 

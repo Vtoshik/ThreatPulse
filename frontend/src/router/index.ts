@@ -4,8 +4,8 @@ import {
   createRouter,
   createWebHashHistory,
   createWebHistory,
-  Router,
 } from 'vue-router';
+import type { Router } from 'vue-router';
 import routes from './routes';
 
 export let router: Router | undefined;

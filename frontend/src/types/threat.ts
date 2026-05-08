@@ -25,7 +25,6 @@ export interface Threat {
   source?: string
   sourceUrl?: string
   sourceName?: string
-  publishedAt?: string
   timeline?: ThreatTimeline[]
 }
 

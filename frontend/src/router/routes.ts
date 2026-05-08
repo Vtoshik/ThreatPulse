@@ -19,7 +19,7 @@ const routes: RouteRecordRaw[] = [
     redirect: '/app/dashboard',
     beforeEnter: (to, from, next) => {
         const token = localStorage.getItem("token");
-        token ? next() : next('/login');
+        if (token) { next() } else { next('/login') }
     },
     children: [
       {

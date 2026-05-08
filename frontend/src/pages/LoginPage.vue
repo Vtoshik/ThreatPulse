@@ -72,8 +72,8 @@ const $q = useQuasar();
 async function handleLogin() {
   try {
     await authStore.login(email.value, password.value);
-    router.push('/app/dashboard')
-  } catch (err) {
+    void router.push('/app/dashboard')
+  } catch {
     $q.notify({
       type: 'negative',
       message: 'Wrong email or password',
