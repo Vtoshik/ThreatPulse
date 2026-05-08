@@ -7,7 +7,6 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
-      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
   jpa:
     hibernate:
       ddl-auto: validate
@@ -20,6 +19,20 @@ app:
     secret: dGVzdFNlY3JldEtleVRoYXRJc0xvbmdFbm91Z2gxMjM=
     expiry-hours: 24
     refresh-expiry-days: 30
+  resend:                                                   
+    api-key: test-fake-key                                                    
+    base-url: https://test.resend.fake                                        
+    source-email: test@example.com
+  nvd:                                                                        
+    api-key: test-fake-key                                  
+  news-api:
+    key: test-fake-key                                                        
+  groq:
+    api-key: test-fake-key                                                    
+    model: llama-3.3-70b-versatile                          
+    base-url: https://test.groq.fake                                                     
+  huggingface:                                              
+    api-key: test-fake-key
 
 logging:
   level:
