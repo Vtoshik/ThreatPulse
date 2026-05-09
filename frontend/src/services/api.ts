@@ -28,7 +28,7 @@ axiosInstanse.interceptors.response.use(
             void router?.push("/login")
         }
 
-        return Promise.reject(new Error(String(error)));
+        return Promise.reject(error);
     }
 );
 
