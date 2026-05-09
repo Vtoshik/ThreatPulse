@@ -2,9 +2,6 @@
 
 **AI-powered cybersecurity intelligence platform** that monitors public vulnerability databases and security news, analyzes threats using large language models, and delivers personalized alerts based on your technology stack.
 
-> Portfolio project by Viktor Hutsuliak — final-year CS student at FIIT STU, Bratislava.
-> Demonstrates production-grade backend engineering: event-driven architecture, AI integration, JWT security, and async processing.
-
 ---
 
 ## The Problem
