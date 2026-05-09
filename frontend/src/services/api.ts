@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
+
 import { router } from "src/router";
 
 const axiosInstanse = axios.create({
@@ -22,13 +23,13 @@ axiosInstanse.interceptors.request.use(
 
 axiosInstanse.interceptors.response.use(
     (response) => response,
-    async (error: { response?: { status: number } }) => {
-        if (error.response && error.response.status === 401) {
+    async (error: unknown) => {
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
             localStorage.removeItem("token");
             void router?.push("/login")
         }
 
-        return Promise.reject(error);
+        return Promise.reject(error instanceof Error ? error : new Error('Request failed'));
     }
 );
 
