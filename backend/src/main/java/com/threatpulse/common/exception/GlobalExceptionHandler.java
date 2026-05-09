@@ -1,11 +1,13 @@
 package com.threatpulse.common.exception;
 
+import java.util.stream.Collectors;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Global exception handler for REST controllers.
@@ -18,6 +20,8 @@ import java.util.stream.Collectors;
  * - Validation errors (MethodArgumentNotValidException)
  * - Generic unhandled exceptions
  */
+
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     /**
@@ -59,6 +63,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        log.error("Unhandled exception", ex);
         return ResponseEntity.status(500).body(new ErrorResponse("Internal server error", 500));
     }
 }

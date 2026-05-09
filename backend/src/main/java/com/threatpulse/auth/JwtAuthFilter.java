@@ -1,17 +1,20 @@
 package com.threatpulse.auth;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Security filter responsible for JWT-based authentication.
@@ -21,6 +24,7 @@ import java.io.IOException;
  * and set in the context, enabling authorization for secured endpoints.
  * This filter runs once per request and is part of the Spring Security filter chain.
  */
+@Slf4j
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
@@ -49,21 +53,26 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (!email.isEmpty() && SecurityContextHolder.getContext().getAuthentication() == null){
 
             // Load user details from database
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            try {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-            // Validate token against user details
-            if (jwtService.isTokenValid(token, userDetails)) {
+                // Validate token against user details
+                if (jwtService.isTokenValid(token, userDetails)) {
 
-                // Create authentication token
-                UsernamePasswordAuthenticationToken authToken = new
-                        UsernamePasswordAuthenticationToken(userDetails, null,
-                        userDetails.getAuthorities());
+                    // Create authentication token
+                    UsernamePasswordAuthenticationToken authToken = new
+                            UsernamePasswordAuthenticationToken(userDetails, null,
+                            userDetails.getAuthorities());
 
-                // Attach request details (IP, session...)
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    // Attach request details (IP, session...)
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                // Set authentication in security context
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    // Set authentication in security context
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+
+            } catch (UsernameNotFoundException e) {
+                log.debug("Token references deleted user - authentication skipped");
             }
         }
         filterChain.doFilter(request, response);

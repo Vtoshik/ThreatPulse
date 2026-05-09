@@ -152,8 +152,8 @@ async function handleRegister() {
       form.value.password,
       stack.value
     )
-    router.replace('/app/dashboard')
-  } catch (err) {
+    void router.replace('/app/dashboard')
+  } catch {
     $q.notify({
       type: 'negative',
       message: 'Registration failed',
