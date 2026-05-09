@@ -81,8 +81,8 @@ PUT /api/user/preferences
 
 ## Frontend UI
 
-> **Note:** The frontend is currently a UI prototype built with Vue 3 + Quasar using mock data.
-> Backend integration (real API calls, JWT auth flow, WebSocket) is the next planned phase.
+> **Note:** The frontend is connected to the backend API with JWT auth flow and real data.
+> WebSocket real-time updates are the next planned feature.
 
 ### Landing & Auth
 
@@ -120,8 +120,8 @@ PUT /api/user/preferences
 - [ ] Semantic search via pgvector embeddings
 - [ ] Redis caching for feed
 - [ ] WebSocket real-time updates
-- [ ] Integration tests (Testcontainers)
-- [ ] CI/CD with GitHub Actions
+- [x] Integration tests (Testcontainers)
+- [x] CI/CD with GitHub Actions
 - [ ] Production deployment on Railway
 
 ### Frontend
@@ -135,8 +135,8 @@ PUT /api/user/preferences
 - [x] Alert rules — list, create, edit
 - [x] Watchlist page
 - [x] Settings — profile, tech stack, notification preferences
-- [ ] Connect to backend REST API (replace mock data)
-- [ ] JWT auth flow (login → store token → API interceptor)
+- [x] Connect to backend REST API (replace mock data)
+- [x] JWT auth flow (login → store token → API interceptor)
 - [ ] Real-time WebSocket updates
 
 ---
