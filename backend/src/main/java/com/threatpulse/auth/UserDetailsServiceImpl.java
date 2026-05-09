@@ -1,14 +1,11 @@
 package com.threatpulse.auth;
 
-import com.threatpulse.user.User;
-import com.threatpulse.user.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.Optional;
+import com.threatpulse.user.UserRepository;
 
 /**
  * Implementation of Spring Security's UserDetailsService.
@@ -26,20 +23,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // Retrieve user from database
-        Optional<User> user = userRepository.findByEmail(email);
-
-        // Throw exception if user is not found
-        if (user.isEmpty()) {
-            throw new UsernameNotFoundException("User not found: " + email);
-        }
-        User foundUser = user.get();
-
-        // Map to Spring Security UserDetails with username, password, and authorities
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(foundUser.getEmail())
-                .password(foundUser.getPasswordHash())
-                .authorities(Collections.emptyList()) // no roles assigned
-                .build();
+        return userRepository.findByEmail(email)                                      
+            .orElseThrow(() -> new UsernameNotFoundException("User not found: " +     
+        email));
     }
 }

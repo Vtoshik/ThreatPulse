@@ -1,15 +1,15 @@
 package com.threatpulse.auth;
 
-import com.threatpulse.auth.dto.AuthResponse;
-import com.threatpulse.auth.dto.LoginRequest;
-import com.threatpulse.auth.dto.RegisterRequest;
-import com.threatpulse.user.User;
-import com.threatpulse.user.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
+import com.threatpulse.auth.dto.AuthResponse;
+import com.threatpulse.auth.dto.LoginRequest;
+import com.threatpulse.auth.dto.RegisterRequest;
+import com.threatpulse.common.exception.ThreatPulseException;
+import com.threatpulse.user.User;
+import com.threatpulse.user.UserRepository;
 
 /**
  * Service responsible for authentication and authorization processes.
@@ -37,7 +37,7 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already in use");
+            throw new ThreatPulseException("Email already in use", 409);
         }
 
         User user = new User(
@@ -56,10 +56,10 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         User foundUser = userRepository
                 .findByEmail(request.getEmail()).orElseThrow(()
-                        -> new RuntimeException("User with this email does not exist"));
+                        -> new ThreatPulseException("User with this email does not exist", 401));
 
         if (!passwordEncoder.matches(request.getPassword(), foundUser.getPasswordHash())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new ThreatPulseException("Invalid credentials", 401);
         }
 
         // loadUserByUsername uses email as identifier in this project

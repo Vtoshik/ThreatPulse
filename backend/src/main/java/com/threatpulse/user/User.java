@@ -1,16 +1,31 @@
 package com.threatpulse.user;
 
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.OffsetDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * JPA entity representing a user in the system.
@@ -24,7 +39,7 @@ import java.util.Set;
 @Table(name = "users")
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class User {
+public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -52,6 +67,33 @@ public class User {
         this.username = username;
         this.email = email;
         this.passwordHash = passwordHash;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {          
+        return Collections.emptyList();                             
+    }                                                                         
+                                                            
+    @Override
+    public String getPassword() { return passwordHash; }
+                                                        
+    @Override                                                                 
+    public String getUsername() { return email; }
+
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    public boolean isEnabled() {
+        return true;
     }
 
 }
