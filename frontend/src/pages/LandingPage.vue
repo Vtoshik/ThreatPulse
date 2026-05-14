@@ -35,17 +35,18 @@
 
       <div class="landing__cta">
         <AppButton variant="primary" size="lg" @click="$router.push('/register')">
-          Start monitoring free →
+          Start monitoring free
         </AppButton>
         <AppButton variant="ghost" size="lg" @click="$router.push('/login')">
           Sign in
         </AppButton>
       </div>
 
-      <!-- Feature grid -->
+      <!-- Feature manifest -->
       <div class="landing__features">
-        <div v-for="f in FEATURES" :key="f.title" class="landing__feature-card">
-          <div class="landing__feature-title">{{ f.title }}</div>
+        <div v-for="(f, i) in FEATURES" :key="f.title" class="landing__feature">
+          <span class="landing__feature-num">{{ String(i + 1).padStart(2, '0') }}</span>
+          <div class="landing__feature-name">{{ f.title }}</div>
           <div class="landing__feature-desc">{{ f.desc }}</div>
         </div>
       </div>
@@ -68,7 +69,7 @@
     <!-- Footer -->
     <footer class="landing__footer">
       <MonoLabel>THREATPULSE · 2026</MonoLabel>
-      <MonoLabel>viktor.hutsuliak — portfolio project</MonoLabel>
+      <MonoLabel>viktor.hutsuliak · portfolio project</MonoLabel>
     </footer>
   </div>
 </template>
@@ -88,7 +89,7 @@ const FEATURES = [
   },
   {
     title: 'Real-time pipeline',
-    desc: 'NVD → Kafka → analyzer → email in under 60 seconds. No polling, no manual checks, no missed vulnerabilities.',
+    desc: 'NVD to Kafka to analyzer to email in under 60 seconds. No polling, no manual checks, no missed vulnerabilities.',
   },
 ]
 
@@ -211,26 +212,37 @@ const TECH_LIST = [
 }
 
 .landing__features {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  max-width: 780px;
   width: 100%;
+  max-width: 720px;
   margin-bottom: 48px;
 }
 
-.landing__feature-card {
-  background: var(--tp-surface);
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: var(--tp-card);
+.landing__feature {
+  display: grid;
+  grid-template-columns: 28px 1fr 1.5fr;
+  gap: 0 28px;
+  align-items: baseline;
+  padding: 18px 0;
+  box-shadow: inset 0 1px 0 var(--tp-border);
   text-align: left;
 }
 
-.landing__feature-title {
+.landing__feature:last-child {
+  box-shadow: inset 0 1px 0 var(--tp-border), inset 0 -1px 0 var(--tp-border);
+}
+
+.landing__feature-num {
+  font-family: var(--tp-mono);
+  font-size: 10px;
+  color: var(--tp-dimmer);
+  letter-spacing: 0.5px;
+  padding-top: 1px;
+}
+
+.landing__feature-name {
   font-size: 13px;
   font-weight: 500;
-  margin-bottom: 8px;
+  color: var(--tp-text);
   letter-spacing: -0.2px;
 }
 

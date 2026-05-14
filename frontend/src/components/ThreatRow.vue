@@ -49,15 +49,9 @@ const { sevColor } = useSeverity()
 const selectedStyle = computed(() => {
   if (props.selected) {
     const c = sevColor(props.threat.severity)
-    return {
-      borderLeft: `3px solid ${c}`,
-      background: `${c}06`,
-    }
+    return { background: `${c}1a` }
   }
-  return {
-    borderLeft: '3px solid transparent',
-    background: hovered.value ? 'var(--tp-surf2)' : 'transparent',
-  }
+  return { background: hovered.value ? 'var(--tp-surf2)' : 'transparent' }
 })
 </script>
 
@@ -70,7 +64,7 @@ const selectedStyle = computed(() => {
   align-items: center;
   box-shadow: inset 0 -1px 0 var(--tp-border);
   cursor: pointer;
-  transition: background 0.1s, border-color 0.1s;
+  transition: background 0.1s;
 }
 
 .threat-row__title-col {

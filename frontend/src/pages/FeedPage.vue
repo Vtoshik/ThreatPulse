@@ -14,9 +14,6 @@
           </button>
         </div>
 
-        <span class="feed-filters__note">
-          Loaded from `/api/threats` and filtered locally by severity.
-        </span>
       </div>
 
       <div class="feed-table-header">
@@ -75,14 +72,20 @@
           </div>
         </div>
 
-        <AppButton
-          variant="ghost"
-          size="sm"
-          style="width:100%"
-          @click="openDetail"
-        >
-          Full details →
-        </AppButton>
+        <div class="feed-detail__actions">
+          <AppButton variant="ghost" size="sm" style="flex:1" @click="openDetail">
+            Full details
+          </AppButton>
+          <AppButton
+            v-if="selected.sourceUrl"
+            variant="ghost"
+            size="sm"
+            style="flex:1"
+            @click="openSource"
+          >
+            Open source
+          </AppButton>
+        </div>
       </div>
     </aside>
   </div>
@@ -175,7 +178,7 @@ async function fetchThreats() {
     threats.value = data.threats
   } catch (error) {
     console.error(error)
-    loadError.value = 'The backend API is not responding. Check that the Spring app is running on port 8080.'
+    loadError.value = 'Unable to load threats. Please try again later.'
   } finally {
     isLoading.value = false
   }
@@ -184,6 +187,12 @@ async function fetchThreats() {
 function openDetail() {
   if (selected.value) {
     void router.push(`/app/threats/${selected.value.id}`)
+  }
+}
+
+function openSource() {
+  if (selected.value?.sourceUrl) {
+    window.open(selected.value.sourceUrl, '_blank', 'noopener,noreferrer')
   }
 }
 </script>
@@ -211,12 +220,6 @@ function openDetail() {
   gap: 12px;
 }
 
-.feed-filters__note {
-  font-size: 10px;
-  color: var(--tp-muted);
-  font-family: var(--tp-mono);
-  white-space: nowrap;
-}
 
 .filter-tabs {
   display: flex;
@@ -325,6 +328,11 @@ function openDetail() {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+.feed-detail__actions {
+  display: flex;
+  gap: 6px;
 }
 
 .feed-detail__meta-val {

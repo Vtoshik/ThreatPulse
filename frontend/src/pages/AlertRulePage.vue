@@ -1,6 +1,6 @@
 <template>
   <div class="page-pad tp-fade-in">
-    <div class="back-link" @click="$router.push('/app/alerts')">← Back to alerts</div>
+    <div class="back-link" @click="$router.push('/app/alerts')">Back to alerts</div>
 
     <PageTitle
       :title="isEdit ? 'Edit rule' : 'New alert rule'"

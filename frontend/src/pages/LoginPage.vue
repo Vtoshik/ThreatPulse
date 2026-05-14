@@ -35,7 +35,7 @@
             :disabled="authStore.isLoading"
             @click="handleLogin"
           >
-            {{ authStore.isLoading ? 'Signing in...' : 'Sign in →' }}
+            {{ authStore.isLoading ? 'Signing in...' : 'Sign in' }}
           </AppButton>
 
           <div class="auth-form__divider" />

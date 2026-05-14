@@ -27,7 +27,7 @@ const color = computed(() => {
 })
 
 const fillStyle = computed(() => ({
-  width: `${(props.score / 10) * 100}%`,
+  transform: `scaleX(${props.score / 10})`,
   background: color.value,
 }))
 </script>
@@ -47,9 +47,11 @@ const fillStyle = computed(() => ({
 }
 
 .score-bar__fill {
+  width: 100%;
   height: 100%;
   border-radius: 1px;
-  transition: width 0.3s ease;
+  transform-origin: left;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .score-bar__value {

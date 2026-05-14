@@ -1,7 +1,7 @@
 <template>
   <div class="page-pad tp-fade-in">
     <PageTitle title="Dashboard" :sub="todaySub" />
- 
+
     <!-- Stat cards -->
 
     <div v-if="isLoadingStats" class="stat-grid">
@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { threatService } from 'src/services/threats.service'
 import { useRouter } from 'vue-router'
 import { useSeverity } from 'src/composables/useSeverity'
@@ -64,6 +64,7 @@ import PageTitle from 'src/components/PageTitle.vue'
 import AppCard from 'src/components/AppCard.vue'
 import MonoLabel from 'src/components/MonoLabel.vue'
 import ThreatRow from 'src/components/ThreatRow.vue'
+import { useWebSocket } from 'src/composables/useWebSocket'
 
 const router = useRouter()
 const { sevColor } = useSeverity()
@@ -73,8 +74,9 @@ const stats = ref<Array<{ label: string; value: number; severity: Severity }>>([
 const isLoadingStats = ref(false)
 const isLoadingThreats = ref(false)
 const TABLE_HEADERS = ['Vulnerability', 'Severity', 'Technology', 'CVSS', 'Age']
+const { threats: wsThreats, connect} = useWebSocket()
 
-const todayCount = ref(0) 
+const todayCount = ref(0)
 const todaySub = computed(() => {
   const d = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -83,6 +85,13 @@ const todaySub = computed(() => {
   })
 
   return `${d} · ${todayCount.value} threats today`
+})
+
+watch(wsThreats, (newThreats) => {
+  const threat = newThreats[0]
+  if (threat) {
+    recentThreats.value.unshift(newThreats[0])
+  }
 })
 
 onMounted(async () => {
@@ -101,7 +110,7 @@ onMounted(async () => {
       { label: 'Critical', value: statsData.critical, severity: 'CRITICAL' },
       { label: 'High', value: statsData.high, severity: 'HIGH' },
       { label: 'Medium', value: statsData.medium, severity: 'MEDIUM' },
-      { label: 'Watching', value: statsData.low, severity: 'LOW' },
+      { label: 'Low', value: statsData.low, severity: 'LOW' },
     ]
 
     todayCount.value = statsData.todayCount ?? 0
@@ -113,6 +122,7 @@ onMounted(async () => {
     isLoadingStats.value = false
     isLoadingThreats.value = false
   }
+  connect()
 })
 
 function openDetail(id: string) {
