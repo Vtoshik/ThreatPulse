@@ -1,6 +1,3 @@
-# ─── CLAUDE.md (private project instructions) ───────────────────────────────
-CLAUDE.md
-
 # ─── Environment / Secrets ───────────────────────────────────────────────────
 .env
 .env.*
@@ -41,6 +38,11 @@ logs/
 .idea/
 *.iml
 out/
+
+# ─── (private project instructions) ───────────────────────────────
+CLAUDE.md
+PRODUCT.md
+.impeccable/
 
 # ─── VS Code ─────────────────────────────────────────────────────────────────
 .vscode/
