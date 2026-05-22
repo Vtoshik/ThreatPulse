@@ -119,7 +119,7 @@ PUT /api/user/preferences
 - [x] Unit tests (AlertService, UserService, AuthService, ThreatAnalyzer, AnalyzerConsumer)
 - [ ] Semantic search via pgvector embeddings
 - [ ] Redis caching for feed
-- [ ] WebSocket real-time updates
+- [x] WebSocket real-time updates
 - [x] Integration tests (Testcontainers)
 - [x] CI/CD with GitHub Actions
 - [ ] Production deployment on Railway
@@ -137,7 +137,7 @@ PUT /api/user/preferences
 - [x] Settings — profile, tech stack, notification preferences
 - [x] Connect to backend REST API (replace mock data)
 - [x] JWT auth flow (login → store token → API interceptor)
-- [ ] Real-time WebSocket updates
+- [x] Real-time WebSocket updates
 
 ---
 

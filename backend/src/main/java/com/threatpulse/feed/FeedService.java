@@ -5,6 +5,7 @@ import com.threatpulse.common.exception.ResourceNotFoundException;
 import com.threatpulse.feed.dto.ThreatPageResponse;
 import com.threatpulse.feed.dto.ThreatResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -45,6 +46,7 @@ public class FeedService {
      * @param query optional search text
      * @return paginated threat response
      */
+    @Cacheable(value = "threats", key = "#page + '-' + #size + '-' + #severity + '-' + #query")
     public ThreatPageResponse getThreats(int page, int size, com.threatpulse.common.domain.Severity severity, String query) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "collectedAt"));
         Specification<Threat> specification = Specification
