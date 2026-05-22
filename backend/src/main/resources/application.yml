@@ -8,6 +8,8 @@
 spring:
   application:
     name: threatpulse
+  cache:
+    type: redis
 
   # ── JPA / Hibernate ──────────────────────────────────────────────────────────
   jpa:
