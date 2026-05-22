@@ -90,7 +90,7 @@ const todaySub = computed(() => {
 watch(wsThreats, (newThreats) => {
   const threat = newThreats[0]
   if (threat) {
-    recentThreats.value.unshift(newThreats[0])
+    recentThreats.value.unshift(threat)
   }
 })
 
