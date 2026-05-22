@@ -9,6 +9,7 @@ import com.threatpulse.common.domain.ThreatCategory;
 import com.threatpulse.feed.ThreatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ public class AnalyzerConsumer {
     private final ThreatRepository threatRepository;
     private final KafkaTemplate<String, AnalyzedThreatEvent> kafkaTemplate;
 
+    @CacheEvict(value = "threats", allEntries = true)
     @KafkaListener(topics = KafkaConfig.RAW_THREATS_TOPIC, groupId = "analyzer-group")
     public void consume(RawThreatEvent event) {
         if (threatRepository.existsByExternalId(event.externalId())) {
