@@ -14,7 +14,7 @@
       <template v-if="step === 1">
         <div class="auth-shell__heading">
           <h1 class="auth-shell__title">Create account</h1>
-          <p class="auth-shell__sub">Free · no credit card required</p>
+          <p class="auth-shell__sub">Set up in 2 minutes. Stack filtering included.</p>
         </div>
 
         <div class="auth-shell__box">
@@ -32,7 +32,7 @@
               <AppInput v-model="form.password" placeholder="min 8 characters" type="password" />
             </div>
             <AppButton variant="primary" size="md" style="width:100%; margin-top:4px" @click="goToStep2()">
-              Continue → Set up stack
+              Continue to stack setup
             </AppButton>
           </div>
         </div>
@@ -88,13 +88,13 @@
               variant="primary" size="md" style="width:100%; 
               margin-top:4px" @click="handleRegister"
               :disabled="authStore.isLoading">
-              Start monitoring →
+              Start monitoring
             </AppButton>
           </div>
         </div>
 
         <div class="auth-shell__footer">
-          <span class="auth-shell__switch" @click="step = 1">← Back</span>
+          <span class="auth-shell__switch" @click="step = 1">Back</span>
         </div>
       </template>
     </div>
@@ -103,6 +103,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import axios from 'axios'
 import { useRouter } from 'vue-router'
 import MonoLabel from 'src/components/MonoLabel.vue'
 import AppInput from 'src/components/AppInput.vue'
@@ -153,10 +154,13 @@ async function handleRegister() {
       stack.value
     )
     void router.replace('/app/dashboard')
-  } catch {
+  } catch (err) {
+    const message = axios.isAxiosError(err)
+      ? (err.response?.data?.message ?? 'Registration failed')
+      : 'Registration failed'
     $q.notify({
       type: 'negative',
-      message: 'Registration failed',
+      message,
       position: 'top',
     })
   }

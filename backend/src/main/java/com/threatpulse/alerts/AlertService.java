@@ -4,31 +4,34 @@ import com.threatpulse.alerts.dto.AlertHistoryResponse;
 import com.threatpulse.alerts.dto.AlertRuleRequest;
 import com.threatpulse.alerts.dto.AlertRuleResponse;
 import com.threatpulse.analyzer.dto.AnalyzedThreatEvent;
+import com.threatpulse.common.config.KafkaConfig;
 import com.threatpulse.common.domain.Severity;
 import com.threatpulse.common.domain.Threat;
 import com.threatpulse.feed.ThreatRepository;
 import com.threatpulse.user.User;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import org.springframework.security.access.AccessDeniedException;
 import java.util.Arrays;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AlertService {
+
     private final AlertRuleRepository alertRuleRepository;
     private final EmailNotifier emailNotifier;
     private final AlertHistoryRepository alertHistoryRepository;
     private final ThreatRepository threatRepository;
+    private final KafkaTemplate<String, AlertTriggerEvent> kafkaTemplate;
 
     @Transactional
     public void checkAndNotify(AnalyzedThreatEvent event) {
-
         // find matching rules
         Severity severity;
         try {
@@ -38,27 +41,43 @@ public class AlertService {
             return;
         }
 
-        List<AlertRule> foundMatchingRules = alertRuleRepository.findMatchingRules(
-                severity.name(), event.affectedTechnologies().toArray(new String[0]));
+        // Guard: convert affectedTechnologies to array, handle null case
+        String[] techArray =
+            event.affectedTechnologies() == null
+                ? new String[0]
+                : event.affectedTechnologies().toArray(new String[0]);
+
+        List<AlertRule> foundMatchingRules =
+            alertRuleRepository.findMatchingRules(severity.name(), techArray);
 
         // for each rule - get user, send email
-        User[] users = foundMatchingRules.stream()
-                .map(AlertRule::getUser)
-                .toArray(User[]::new);
+        User[] users = foundMatchingRules
+            .stream()
+            .map(AlertRule::getUser)
+            .toArray(User[]::new);
 
         String[] emailsToNotify = Arrays.stream(users)
-                .map(User::getEmail)
-                .toArray(String[]::new);
+            .map(User::getEmail)
+            .toArray(String[]::new);
 
         if (emailsToNotify.length == 0) {
             return;
         }
 
-        emailNotifier.sendAlert(emailsToNotify, event.title(), event.aiSummary());
-        Threat threat = threatRepository.findByExternalId(event.externalId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "Threat not found for externalId=" + event.externalId()
-                ));
+        // Ensure threat exists before sending alert
+        Threat threat = threatRepository
+            .findByExternalId(event.externalId())
+            .orElseThrow(() ->
+                new IllegalStateException(
+                    "Threat not found for externalId=" + event.externalId()
+                )
+            );
+        // Send alert and save history for each user
+        emailNotifier.sendAlert(
+            emailsToNotify,
+            event.title(),
+            event.aiSummary()
+        );
 
         for (User user : users) {
             AlertHistory alertHistory = new AlertHistory();
@@ -66,22 +85,25 @@ public class AlertService {
             alertHistory.setChannel("EMAIL");
             alertHistory.setUser(user);
             alertHistoryRepository.save(alertHistory);
+            kafkaTemplate.send(KafkaConfig.ALERT_TRIGGERS_TOPIC, new AlertTriggerEvent(
+                    user.getId(), event.title(), severity, threat.getId()));
         }
     }
 
-    private AlertRuleResponse mapAlertRuleToResponseObject(AlertRule alertRule) {
+    private AlertRuleResponse mapAlertRuleToResponseObject(
+        AlertRule alertRule
+    ) {
         return new AlertRuleResponse(
-                alertRule.getId(),
-                alertRule.getMinSeverity(),
-                alertRule.getTechnologiesFilter(),
-                alertRule.isActive()
+            alertRule.getId(),
+            alertRule.getMinSeverity(),
+            alertRule.getTechnologiesFilter(),
+            alertRule.isActive()
         );
     }
 
     public List<AlertRuleResponse> getRulesForUser(User user) {
         List<AlertRule> rules = alertRuleRepository.findByUser(user);
-        return rules.stream()
-                .map(this::mapAlertRuleToResponseObject).toList();
+        return rules.stream().map(this::mapAlertRuleToResponseObject).toList();
     }
 
     public AlertRuleResponse createRule(User user, AlertRuleRequest request) {
@@ -94,14 +116,21 @@ public class AlertService {
         return mapAlertRuleToResponseObject(rule);
     }
 
-    public AlertRuleResponse updateRule(Long id, User user, AlertRuleRequest request) throws AccessDeniedException {
-        AlertRule alertRule = alertRuleRepository.findById(id)
-                .orElseThrow(() -> new IllegalStateException(
-                        "AlertRule not found for Id=" + id
-                ));
+    public AlertRuleResponse updateRule(
+        Long id,
+        User user,
+        AlertRuleRequest request
+    ) throws AccessDeniedException {
+        AlertRule alertRule = alertRuleRepository
+            .findById(id)
+            .orElseThrow(() ->
+                new IllegalStateException("AlertRule not found for Id=" + id)
+            );
 
         if (!alertRule.getUser().getId().equals(user.getId())) {
-            throw new AccessDeniedException("Found rule does not belong to this User");
+            throw new AccessDeniedException(
+                "Found rule does not belong to this User"
+            );
         }
 
         alertRule.setTechnologiesFilter(request.technologiesFilter());
@@ -111,24 +140,33 @@ public class AlertService {
     }
 
     public boolean deleteRule(Long id, User user) throws AccessDeniedException {
-        AlertRule alertRule = alertRuleRepository.findById(id)
-                .orElseThrow(() -> new IllegalStateException(
-                "AlertRule not found for Id=" + id));
+        AlertRule alertRule = alertRuleRepository
+            .findById(id)
+            .orElseThrow(() ->
+                new IllegalStateException("AlertRule not found for Id=" + id)
+            );
         if (!alertRule.getUser().getId().equals(user.getId())) {
-            throw new AccessDeniedException("Found rule does not belong to this User");
+            throw new AccessDeniedException(
+                "Found rule does not belong to this User"
+            );
         }
         alertRuleRepository.delete(alertRule);
         return true;
     }
 
     public AlertHistoryResponse[] getHistoryForUser(User user) {
-        return alertHistoryRepository.findByUser(user)
-                .stream().map(history -> new AlertHistoryResponse(
-                        history.getId(),
-                        history.getThreat().getId(),
-                        history.getThreat().getTitle(),
-                        history.getChannel(),
-                        history.getSentAt()
-                )).toArray(AlertHistoryResponse[]::new);
+        return alertHistoryRepository
+            .findByUser(user)
+            .stream()
+            .map(history ->
+                new AlertHistoryResponse(
+                    history.getId(),
+                    history.getThreat().getId(),
+                    history.getThreat().getTitle(),
+                    history.getChannel(),
+                    history.getSentAt()
+                )
+            )
+            .toArray(AlertHistoryResponse[]::new);
     }
 }

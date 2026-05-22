@@ -13,9 +13,11 @@
 
     <template v-else-if="threat">
       <div class="detail-back">
-        <span class="detail-back__link" @click="$router.push('/app/feed')">← Back to feed</span>
+        <span class="detail-back__link" @click="$router.push('/app/feed')">Back to feed</span>
         <span class="detail-back__dot">·</span>
-        <span class="detail-back__cve">{{ threat.cve }}</span>
+        <span class="detail-back__cve detail-back__cve--copy" @click="copyCve" :title="`Copy ${threat.cve}`">
+          {{ cveCopied ? 'Copied' : threat.cve }}
+        </span>
       </div>
 
       <div class="detail-title-row">
@@ -40,7 +42,7 @@
           <AppCard style="padding:20px">
             <div class="detail-section-header">
               <MonoLabel>AI Summary</MonoLabel>
-              <span class="detail-model-tag">Backend response</span>
+              <span class="detail-model-tag">Groq · Llama 3.3</span>
             </div>
             <p class="detail-summary">
               {{ threat.summary || 'No AI summary is available for this threat yet.' }}
@@ -79,7 +81,7 @@
           </AppCard>
 
           <AppButton variant="ghost" size="sm" style="width:100%" @click="openSource">
-            ↗ Open source page
+            Open source
           </AppButton>
         </div>
       </div>
@@ -106,6 +108,7 @@ const { sevColor } = useSeverity()
 const threat = ref<Threat | null>(null)
 const isLoading = ref(false)
 const loadError = ref('')
+const cveCopied = ref(false)
 
 const affectedTechnologies = computed(() => threat.value?.affected ?? [])
 
@@ -138,10 +141,18 @@ async function fetchThreat(id: string) {
     threat.value = await threatService.getThreatById(id)
   } catch (error) {
     console.error(error)
-    loadError.value = 'The backend API could not return this threat. Check the id and ensure the Spring app is running.'
+    loadError.value = 'Unable to load this threat. It may have been removed or the service is temporarily unavailable.'
     threat.value = null
   } finally {
     isLoading.value = false
+  }
+}
+
+function copyCve() {
+  if (threat.value?.cve) {
+    void navigator.clipboard.writeText(threat.value.cve)
+    cveCopied.value = true
+    setTimeout(() => { cveCopied.value = false }, 2000)
   }
 }
 
@@ -190,6 +201,15 @@ function openSource() {
   font-size: 11px;
   color: var(--tp-muted);
   letter-spacing: 0.3px;
+}
+
+.detail-back__cve--copy {
+  cursor: pointer;
+  transition: color 0.1s;
+}
+
+.detail-back__cve--copy:hover {
+  color: var(--tp-sec);
 }
 
 .detail-title-row {
