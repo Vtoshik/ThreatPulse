@@ -7,7 +7,6 @@
 
 # Local dev application config (contains real API keys)
 backend/src/main/resources/application-dev.yml
-backend/src/main/resources/application-prod.yml
 docker-compose.override.yml
 
 # ─── Java / Maven ────────────────────────────────────────────────────────────
