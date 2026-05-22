@@ -12,6 +12,8 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  cache:
+    type: none
 
 app:
   jwt:
