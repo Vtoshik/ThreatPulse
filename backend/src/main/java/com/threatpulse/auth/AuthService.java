@@ -39,6 +39,9 @@ public class AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new ThreatPulseException("Email already in use", 409);
         }
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new ThreatPulseException("Username already in use", 409);
+        }
 
         User user = new User(
                 request.getUsername(),
