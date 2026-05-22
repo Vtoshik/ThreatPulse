@@ -55,4 +55,8 @@
   --tp-sb:   rgba(255, 255, 255, 0.08) 0px 0px 0px 1px;
   --tp-sb2:  rgba(255, 255, 255, 0.14) 0px 0px 0px 1px;
   --tp-card: rgba(255, 255, 255, 0.08) 0px 0px 0px 1px, rgba(0, 0, 0, 0.5) 0px 4px 16px;
+
+  /* Motion — exponential ease-out curves, no bounce */
+  --tp-ease:      cubic-bezier(0.22, 1, 0.36, 1);
+  --tp-ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
