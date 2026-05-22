@@ -6,7 +6,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
   data:
     redis:
@@ -21,7 +21,11 @@ app:
     news-api-key: ${NEWS_API_KEY}
     groq-key: ${GROQ_API_KEY}
     huggingface-key: ${HUGGINGFACE_API_KEY}
-    resend-key: ${RESEND_API_KEY}
+
+  resend:
+    api-key: ${RESEND_API_KEY}
+    base-url: https://api.resend.com
+    source-email: ${RESEND_SOURCE_EMAIL:noreply@threatpulse.dev}
 
   jwt:
     secret: ${JWT_SECRET}
