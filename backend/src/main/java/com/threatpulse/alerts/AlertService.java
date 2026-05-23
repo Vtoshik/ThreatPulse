@@ -13,8 +13,10 @@ import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.lang.Nullable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +30,10 @@ public class AlertService {
     private final EmailNotifier emailNotifier;
     private final AlertHistoryRepository alertHistoryRepository;
     private final ThreatRepository threatRepository;
-    private final KafkaTemplate<String, AlertTriggerEvent> kafkaTemplate;
+
+    @Nullable
+    @Autowired(required = false)
+    private KafkaTemplate<String, AlertTriggerEvent> kafkaTemplate;
 
     @Transactional
     public void checkAndNotify(AnalyzedThreatEvent event) {
@@ -85,8 +90,10 @@ public class AlertService {
             alertHistory.setChannel("EMAIL");
             alertHistory.setUser(user);
             alertHistoryRepository.save(alertHistory);
-            kafkaTemplate.send(KafkaConfig.ALERT_TRIGGERS_TOPIC, new AlertTriggerEvent(
-                    user.getId(), event.title(), severity, threat.getId()));
+            if (kafkaTemplate != null) {
+                kafkaTemplate.send(KafkaConfig.ALERT_TRIGGERS_TOPIC, new AlertTriggerEvent(
+                        user.getId(), event.title(), severity, threat.getId()));
+            }
         }
     }
 
