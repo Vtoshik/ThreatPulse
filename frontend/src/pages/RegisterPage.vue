@@ -110,6 +110,7 @@ import AppInput from 'src/components/AppInput.vue'
 import AppButton from 'src/components/AppButton.vue'
 import AppTag from 'src/components/AppTag.vue'
 import { useAuthStore } from 'src/stores/auth'
+import { alertsService } from 'src/services/alerts.service'
 import { useQuasar } from 'quasar'
 
 const router = useRouter()
@@ -118,7 +119,7 @@ const $q = useQuasar()
 
 const step = ref(1)
 const form = ref({ name: '', email: '', password: '' })
-const stack = ref(['spring-boot', 'postgresql'])
+const stack = ref<string[]>([])
 const stackInput = ref('')
 
 const ALL_TECH = ['spring-boot', 'postgresql', 'kafka', 'redis', 'docker', 'nginx', 'node.js', 'mongodb', 'react', 'vue', 'django']
@@ -153,6 +154,9 @@ async function handleRegister() {
       form.value.password,
       stack.value
     )
+    if (stack.value.length > 0) {
+      await alertsService.createRule('My stack alerts', 'HIGH', stack.value)
+    }
     void router.replace('/app/dashboard')
   } catch (err) {
     const message = axios.isAxiosError(err)

@@ -27,7 +27,7 @@
     </div>
 
     <!-- Threats table -->
-    <AppCard style="overflow:hidden">
+    <AppCard class="table-card">
       <div v-if="isLoadingThreats" style="padding: 20px; opacity: 0.6">
         <MonoLabel>Loading threats...</MonoLabel>
       </div>
@@ -138,6 +138,13 @@ function openDetail(id: string) {
 <style scoped>
 .page-pad {
   padding: 24px 28px;
+}
+
+@media (max-width: 768px) {
+  .page-pad { padding: 16px; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .table-card { overflow-x: auto; }
+  .table-header { display: none; }
 }
 
 .stat-grid {

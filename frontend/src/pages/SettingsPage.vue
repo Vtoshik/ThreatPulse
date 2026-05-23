@@ -3,21 +3,6 @@
     <PageTitle title="Settings" sub="Profile & notification preferences" />
 
     <div class="settings-form">
-      <!-- Profile -->
-      <AppCard style="padding:20px">
-        <MonoLabel style="display:block; margin-bottom:14px">Profile</MonoLabel>
-        <div class="settings-fields">
-          <div>
-            <MonoLabel style="display:block; margin-bottom:6px">Name</MonoLabel>
-            <AppInput v-model="name" />
-          </div>
-          <div>
-            <MonoLabel style="display:block; margin-bottom:6px">Email</MonoLabel>
-            <AppInput v-model="email" type="email" />
-          </div>
-        </div>
-      </AppCard>
-
       <!-- Tech Stack -->
       <AppCard style="padding:20px">
         <MonoLabel style="display:block; margin-bottom:14px">Technology Stack</MonoLabel>
@@ -56,7 +41,6 @@
       <AppCard style="padding:20px">
         <MonoLabel style="display:block; margin-bottom:14px">Notifications</MonoLabel>
 
-        <!-- Min severity -->
         <div style="margin-bottom:16px">
           <MonoLabel style="display:block; margin-bottom:8px">Minimum alert severity</MonoLabel>
           <div class="sev-picker">
@@ -73,34 +57,32 @@
           </div>
         </div>
 
-        <!-- Toggles -->
-        <div
-          v-for="row in notifRows"
-          :key="row.label"
-          class="notif-row"
-        >
+        <div class="notif-row">
           <div>
-            <div class="notif-label">{{ row.label }}</div>
-            <div class="notif-sub">{{ row.sub }}</div>
+            <div class="notif-label">Email alerts</div>
+            <div class="notif-sub">{{ authStore.user?.email ?? '' }}</div>
           </div>
-          <ToggleSwitch :model-value="row.value" @update:model-value="row.set($event)" />
+          <ToggleSwitch v-model="emailOn" />
         </div>
       </AppCard>
 
       <!-- Actions -->
       <div class="form-actions">
-        <AppButton variant="primary" size="md">Save changes</AppButton>
-        <AppButton variant="ghost" size="md">Cancel</AppButton>
+        <AppButton variant="primary" size="md" :disabled="saving" @click="save">
+          {{ saving ? 'Saving…' : 'Save changes' }}
+        </AppButton>
+        <AppButton variant="ghost" size="md" @click="reset">Cancel</AppButton>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { Severity } from 'src/types/threat'
 import { useSeverity } from 'src/composables/useSeverity'
-import { USER_STACK } from 'src/data/mockData'
+import { useAuthStore } from 'src/stores/auth'
+import api from 'src/services/api'
 import PageTitle from 'src/components/PageTitle.vue'
 import AppCard from 'src/components/AppCard.vue'
 import AppInput from 'src/components/AppInput.vue'
@@ -110,24 +92,18 @@ import MonoLabel from 'src/components/MonoLabel.vue'
 import ToggleSwitch from 'src/components/ToggleSwitch.vue'
 
 const { sevColor } = useSeverity()
+const authStore = useAuthStore()
 
 const SEVERITIES: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
-const ALL_TECH = ['spring-boot', 'postgresql', 'kafka', 'redis', 'docker', 'nginx', 'node.js', 'mongodb']
+const ALL_TECH = ['spring-boot', 'postgresql', 'kafka', 'redis', 'docker', 'nginx', 'node.js', 'mongodb', 'react', 'vue', 'django']
 
-const name       = ref('')
-const email      = ref('')
-const stack      = ref([...USER_STACK])
+const stack      = ref<string[]>([])
 const stackInput = ref('')
 const minSev     = ref<Severity>('HIGH')
-const emailOn    = ref(true)
-const digestOn   = ref(false)
+const emailOn    = ref(false)
+const saving     = ref(false)
 
 const remainingAll = computed(() => ALL_TECH.filter(t => !stack.value.includes(t)))
-
-const notifRows = computed(() => [
-  { label: 'Email alerts',  sub: 'Instant notification on new CVE match', value: emailOn.value,  set: (v: boolean) => { emailOn.value = v } },
-  { label: 'Daily digest',  sub: 'Summary of all threats at 08:00',       value: digestOn.value, set: (v: boolean) => { digestOn.value = v } },
-])
 
 function activeSevStyle(s: Severity) {
   const c = sevColor(s)
@@ -146,22 +122,42 @@ function addCustomStack() {
   const t = stackInput.value.trim()
   if (t) { addStack(t); stackInput.value = '' }
 }
+
+function reset() {
+  stack.value = [...(authStore.user?.technologies ?? [])]
+}
+
+async function save() {
+  saving.value = true
+  try {
+    await api.put('/api/user/technologies', stack.value)
+    await api.put('/api/user/preferences', { minSeverity: minSev.value, emailAlertsEnabled: emailOn.value })
+    if (authStore.user) {
+      authStore.user.technologies = [...stack.value]
+    }
+  } finally {
+    saving.value = false
+  }
+}
+
+onMounted(() => {
+  stack.value = [...(authStore.user?.technologies ?? [])]
+})
 </script>
 
 <style scoped>
 .page-pad { padding: 24px 28px; }
+
+@media (max-width: 768px) {
+  .page-pad { padding: 16px; }
+  .settings-form { max-width: 100%; }
+}
 
 .settings-form {
   max-width: 560px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.settings-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .stack-tags {
@@ -222,7 +218,6 @@ function addCustomStack() {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .notif-label {

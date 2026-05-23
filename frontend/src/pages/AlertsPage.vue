@@ -173,6 +173,14 @@ onMounted(() => {
 <style scoped>
 .page-pad { padding: 24px 28px; }
 
+@media (max-width: 768px) {
+  .page-pad { padding: 16px; }
+  .alerts-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .history-header { grid-template-columns: 1fr 80px; }
+  .history-row { grid-template-columns: 1fr 80px; }
+  .history-row > :nth-child(3) { display: none; }
+}
+
 .alerts-header {
   display: flex;
   justify-content: space-between;

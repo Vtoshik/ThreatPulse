@@ -71,18 +71,6 @@
         </div>
       </AppCard>
 
-      <!-- Channels -->
-      <AppCard style="padding:20px">
-        <MonoLabel style="display:block; margin-bottom:12px">Notification channels</MonoLabel>
-        <div class="channel-row">
-          <div>
-            <div class="channel-label">Email notifications</div>
-            <div class="channel-sub">{{ authStore.user?.email ?? '' }}</div>
-          </div>
-          <ToggleSwitch v-model="emailEnabled" />
-        </div>
-      </AppCard>
-
       <!-- Actions -->
       <div class="form-actions">
         <AppButton variant="primary" size="md" style="flex:1" :disabled="saving" @click="save">
@@ -109,7 +97,6 @@ import AppInput from 'src/components/AppInput.vue'
 import AppButton from 'src/components/AppButton.vue'
 import AppTag from 'src/components/AppTag.vue'
 import MonoLabel from 'src/components/MonoLabel.vue'
-import ToggleSwitch from 'src/components/ToggleSwitch.vue'
 
 const route     = useRoute()
 const router    = useRouter()
@@ -125,7 +112,6 @@ const ruleId  = computed(() => Number(route.params['id']))
 const name         = ref('')
 const severity     = ref<Severity>('HIGH')
 const tech         = ref<string[]>([])
-const emailEnabled = ref(true)
 const techInput    = ref('')
 const saving       = ref(false)
 
@@ -185,6 +171,11 @@ onMounted(async () => {
 
 <style scoped>
 .page-pad { padding: 24px 28px; }
+
+@media (max-width: 768px) {
+  .page-pad { padding: 16px; }
+  .rule-form { max-width: 100%; }
+}
 
 .back-link {
   font-size: 12px;
