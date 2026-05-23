@@ -3,11 +3,13 @@ package com.threatpulse.alerts;
 import com.threatpulse.analyzer.dto.AnalyzedThreatEvent;
 import com.threatpulse.common.config.KafkaConfig;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "app.pipeline.kafka-enabled", havingValue = "true", matchIfMissing = true)
 public class AlertConsumer {
     private final AlertService alertService;
 
