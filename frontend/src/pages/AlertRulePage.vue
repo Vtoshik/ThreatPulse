@@ -90,7 +90,6 @@ import { useRoute, useRouter } from 'vue-router'
 import type { Severity } from 'src/types/threat'
 import { alertsService } from 'src/services/alerts.service'
 import { useSeverity } from 'src/composables/useSeverity'
-import { useAuthStore } from 'src/stores/auth'
 import PageTitle from 'src/components/PageTitle.vue'
 import AppCard from 'src/components/AppCard.vue'
 import AppInput from 'src/components/AppInput.vue'
@@ -100,7 +99,6 @@ import MonoLabel from 'src/components/MonoLabel.vue'
 
 const route     = useRoute()
 const router    = useRouter()
-const authStore = useAuthStore()
 const { sevColor } = useSeverity()
 
 const SEVERITIES: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO']
