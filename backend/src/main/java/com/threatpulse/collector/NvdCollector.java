@@ -3,11 +3,9 @@ package com.threatpulse.collector;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.threatpulse.collector.dto.RawThreatEvent;
-import com.threatpulse.common.config.KafkaConfig;
 import com.threatpulse.feed.ThreatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -19,7 +17,7 @@ import java.time.format.DateTimeFormatter;
 @Component
 @RequiredArgsConstructor
 public class NvdCollector {
-    private final KafkaTemplate<String, RawThreatEvent> kafkaTemplate;
+    private final ThreatEventPublisher threatEventPublisher;
     private final ThreatRepository threatRepository;
     private final ObjectMapper objectMapper;
 
@@ -77,7 +75,7 @@ public class NvdCollector {
                         RawThreatEvent event = new RawThreatEvent(
                                 cveId, cveId, description, sourceUrl, sourceName, published, "CVE"
                         );
-                        kafkaTemplate.send(KafkaConfig.RAW_THREATS_TOPIC, event.externalId(), event);
+                        threatEventPublisher.publish(event);
                     }
                 }
             }

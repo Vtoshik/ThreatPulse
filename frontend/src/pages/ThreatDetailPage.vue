@@ -80,9 +80,20 @@
             </div>
           </AppCard>
 
-          <AppButton variant="ghost" size="sm" style="width:100%" @click="openSource">
-            Open source
-          </AppButton>
+          <div style="display:flex; gap:8px">
+            <AppButton variant="ghost" size="sm" style="flex:1" @click="openSource">
+              Open source
+            </AppButton>
+            <AppButton
+              v-if="threat"
+              variant="ghost"
+              size="sm"
+              style="flex:1"
+              @click="bookmarksStore.toggle(threat)"
+            >
+              {{ bookmarksStore.isBookmarked(threat.id) ? '★ Saved' : '☆ Save' }}
+            </AppButton>
+          </div>
         </div>
       </div>
     </template>
@@ -90,10 +101,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { Threat } from 'src/types/threat'
 import { threatService } from 'src/services/threats.service'
+import { useBookmarksStore } from 'src/stores/bookmarks'
 import { useSeverity } from 'src/composables/useSeverity'
 import SeverityBadge from 'src/components/SeverityBadge.vue'
 import MonoLabel from 'src/components/MonoLabel.vue'
@@ -104,6 +116,9 @@ import EmptyState from 'src/components/EmptyState.vue'
 
 const route = useRoute()
 const { sevColor } = useSeverity()
+const bookmarksStore = useBookmarksStore()
+
+onMounted(() => void bookmarksStore.load())
 
 const threat = ref<Threat | null>(null)
 const isLoading = ref(false)

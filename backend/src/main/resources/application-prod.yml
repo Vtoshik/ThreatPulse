@@ -5,8 +5,9 @@ spring:
     password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
 
   data:
     redis:
@@ -16,6 +17,9 @@ server:
   port: ${PORT:8080}
 
 app:
+  pipeline:
+    kafka-enabled: false
+
   api:
     nvd-key: ${NVD_API_KEY:}
     news-api-key: ${NEWS_API_KEY:}

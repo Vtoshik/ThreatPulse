@@ -21,6 +21,13 @@
     <ScoreBar :score="threat.score" :severity="threat.severity" />
 
     <span class="threat-row__mono">{{ threat.age }}</span>
+
+    <button
+      class="threat-row__bookmark"
+      :class="{ 'threat-row__bookmark--active': isBookmarked }"
+      @click.stop="$emit('bookmark', threat)"
+      :title="isBookmarked ? 'Remove from watchlist' : 'Add to watchlist'"
+    >{{ isBookmarked ? '★' : '☆' }}</button>
   </div>
 </template>
 
@@ -36,12 +43,14 @@ const props = withDefaults(defineProps<{
   threat: Threat
   selected?: boolean
   first?: boolean
+  isBookmarked?: boolean
 }>(), {
   selected: false,
   first: false,
+  isBookmarked: false,
 })
 
-defineEmits<{ click: [] }>()
+defineEmits<{ click: []; bookmark: [threat: Threat] }>()
 
 const hovered = ref(false)
 const { sevColor } = useSeverity()
@@ -59,7 +68,7 @@ const selectedStyle = computed(() => {
 .threat-row {
   padding: 12px 20px;
   display: grid;
-  grid-template-columns: 1fr 92px 110px 120px 44px;
+  grid-template-columns: 1fr 92px 110px 120px 44px 28px;
   gap: 12px;
   align-items: center;
   box-shadow: inset 0 -1px 0 var(--tp-border);
@@ -89,5 +98,30 @@ const selectedStyle = computed(() => {
   font-family: var(--tp-mono);
   font-size: 11px;
   color: var(--tp-muted);
+}
+
+.threat-row__bookmark {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--tp-dimmer);
+  padding: 0;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.threat-row:hover .threat-row__bookmark,
+.threat-row__bookmark--active {
+  opacity: 1 !important;
+}
+
+.threat-row__bookmark--active {
+  color: var(--tp-sec);
+}
+
+.threat-row__bookmark:hover {
+  color: var(--tp-text);
 }
 </style>

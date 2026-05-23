@@ -46,7 +46,9 @@
           :threat="t"
           :selected="selected?.id === t.id"
           :first="index === 0"
+          :is-bookmarked="bookmarksStore.isBookmarked(t.id)"
           @click="selected = t"
+          @bookmark="bookmarksStore.toggle($event)"
         />
       </div>
     </div>
@@ -96,6 +98,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Severity, Threat } from 'src/types/threat'
 import { threatService } from 'src/services/threats.service'
+import { useBookmarksStore } from 'src/stores/bookmarks'
 import MonoLabel from 'src/components/MonoLabel.vue'
 import ThreatRow from 'src/components/ThreatRow.vue'
 import SeverityBadge from 'src/components/SeverityBadge.vue'
@@ -103,9 +106,10 @@ import EmptyState from 'src/components/EmptyState.vue'
 import AppButton from 'src/components/AppButton.vue'
 
 const router = useRouter()
+const bookmarksStore = useBookmarksStore()
 
 const FILTERS = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const
-const TABLE_HEADERS = ['Vulnerability', 'Severity', 'Technology', 'Risk', 'Age']
+const TABLE_HEADERS = ['Vulnerability', 'Severity', 'Technology', 'Risk', 'Age', '']
 
 const isLoading = ref(false)
 const loadError = ref('')
@@ -162,7 +166,10 @@ watch(filteredThreats, (items) => {
   }
 }, { immediate: true })
 
-onMounted(fetchThreats)
+onMounted(() => {
+  void fetchThreats()
+  void bookmarksStore.load()
+})
 
 async function fetchThreats() {
   isLoading.value = true
@@ -256,7 +263,7 @@ function openSource() {
   padding: 9px 20px;
   box-shadow: inset 0 -1px 0 var(--tp-border);
   display: grid;
-  grid-template-columns: 1fr 92px 110px 120px 44px;
+  grid-template-columns: 1fr 92px 110px 120px 44px 28px;
   gap: 12px;
   align-items: center;
 }

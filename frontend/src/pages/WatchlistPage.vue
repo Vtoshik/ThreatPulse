@@ -1,6 +1,6 @@
 <template>
   <div class="page-pad tp-fade-in">
-    <PageTitle title="Watchlist" :sub="`${list.length} saved threats`" />
+    <PageTitle title="Watchlist" :sub="`${list.length} saved threat${list.length === 1 ? '' : 's'}`" />
 
     <EmptyState
       v-if="list.length === 0"
@@ -39,9 +39,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { THREATS } from 'src/data/mockData'
+import { useBookmarksStore } from 'src/stores/bookmarks'
 import PageTitle from 'src/components/PageTitle.vue'
 import AppCard from 'src/components/AppCard.vue'
 import AppButton from 'src/components/AppButton.vue'
@@ -51,10 +51,14 @@ import ScoreBar from 'src/components/ScoreBar.vue'
 import EmptyState from 'src/components/EmptyState.vue'
 
 const router = useRouter()
-const list = ref(THREATS.filter((_, i) => [0, 2, 4].includes(i)))
+const bookmarksStore = useBookmarksStore()
+const list = computed(() => bookmarksStore.bookmarks)
+
+onMounted(() => void bookmarksStore.load())
 
 function remove(id: string) {
-  list.value = list.value.filter(t => t.id !== id)
+  const threat = list.value.find(t => t.id === id)
+  if (threat) void bookmarksStore.toggle(threat)
 }
 
 function openDetail(id: string) {
