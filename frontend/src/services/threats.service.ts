@@ -65,7 +65,7 @@ function threatScore(severity: Severity): number {
   return SEVERITY_SCORE[severity] ?? SEVERITY_SCORE.INFO
 }
 
-function mapThreat(apiThreat: ApiThreat): Threat {
+export function mapThreat(apiThreat: ApiThreat): Threat {
   const affectedTechnologies = apiThreat.affectedTechnologies ?? []
 
   return {

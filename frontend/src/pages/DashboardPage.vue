@@ -46,7 +46,9 @@
             :key="threat.id"
             :threat="threat"
             :first="i === 0"
+            :is-bookmarked="bookmarksStore.isBookmarked(threat.id)"
             @click="openDetail(threat.id)"
+            @bookmark="bookmarksStore.toggle($event)"
           />
         </template>
       </template>
@@ -57,6 +59,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { threatService } from 'src/services/threats.service'
+import { useBookmarksStore } from 'src/stores/bookmarks'
 import { useRouter } from 'vue-router'
 import { useSeverity } from 'src/composables/useSeverity'
 import type { Severity, Threat } from 'src/types/threat'
@@ -68,12 +71,13 @@ import { useWebSocket } from 'src/composables/useWebSocket'
 
 const router = useRouter()
 const { sevColor } = useSeverity()
+const bookmarksStore = useBookmarksStore()
 
 const recentThreats = ref<Threat[]>([])
 const stats = ref<Array<{ label: string; value: number; severity: Severity }>>([])
 const isLoadingStats = ref(false)
 const isLoadingThreats = ref(false)
-const TABLE_HEADERS = ['Vulnerability', 'Severity', 'Technology', 'CVSS', 'Age']
+const TABLE_HEADERS = ['Vulnerability', 'Severity', 'Technology', 'CVSS', 'Age', '']
 const { threats: wsThreats, connect} = useWebSocket()
 
 const todayCount = ref(0)
@@ -123,6 +127,7 @@ onMounted(async () => {
     isLoadingThreats.value = false
   }
   connect()
+  void bookmarksStore.load()
 })
 
 function openDetail(id: string) {
@@ -178,7 +183,7 @@ function openDetail(id: string) {
   padding: 9px 20px;
   box-shadow: inset 0 -1px 0 var(--tp-border);
   display: grid;
-  grid-template-columns: 1fr 92px 110px 120px 44px;
+  grid-template-columns: 1fr 92px 110px 120px 44px 28px;
   gap: 12px;
   align-items: center;
 }
