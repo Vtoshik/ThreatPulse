@@ -5,11 +5,9 @@ import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 import com.threatpulse.collector.dto.RawThreatEvent;
-import com.threatpulse.common.config.KafkaConfig;
 import com.threatpulse.feed.ThreatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.net.URL;
@@ -21,7 +19,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class RssCollector {
-    private final KafkaTemplate<String, RawThreatEvent> kafkaTemplate;
+    private final ThreatEventPublisher threatEventPublisher;
     private final ThreatRepository threatRepository;
 
     private static final List<String> RSS_FEEDS = List.of(
@@ -67,7 +65,7 @@ public class RssCollector {
                         externalId, title, description, sourceUrl, sourceName, published, "RSS"
                 );
 
-                kafkaTemplate.send(KafkaConfig.RAW_THREATS_TOPIC, externalId, event);
+                threatEventPublisher.publish(event);
             }
         } catch (Exception e) {
             log.error("Failed to collect RSS feed: {}", feedUrl, e);

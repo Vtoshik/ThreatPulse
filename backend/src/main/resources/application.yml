@@ -42,6 +42,10 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
+app:
+  pipeline:
+    kafka-enabled: true
+
 # ── Spring Boot Actuator (health checks, metrics) ────────────────────────────
 # /actuator/health is used by Railway and Docker to check if the app is alive
 management:
