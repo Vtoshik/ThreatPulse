@@ -53,6 +53,7 @@ public class BookmarkService {
                 threat.getId(),
                 threat.getExternalId(),
                 threat.getTitle(),
+                threat.getDescription(),
                 threat.getAiSummary(),
                 threat.getSeverity(),
                 threat.getThreatCategory(),
