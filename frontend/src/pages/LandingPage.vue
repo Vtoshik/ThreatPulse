@@ -143,7 +143,7 @@
 
     <footer class="landing__footer">
       <MonoLabel>THREATPULSE · 2026</MonoLabel>
-      <MonoLabel>viktor.hutsuliak · portfolio project</MonoLabel>
+      <MonoLabel>portfolio project</MonoLabel>
     </footer>
   </div>
 </template>

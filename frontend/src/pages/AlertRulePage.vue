@@ -8,12 +8,6 @@
     />
 
     <div class="rule-form">
-      <!-- Name -->
-      <AppCard style="padding:20px">
-        <MonoLabel style="display:block; margin-bottom:8px">Rule name</MonoLabel>
-        <AppInput v-model="name" placeholder='e.g. "Critical in my stack"' />
-      </AppCard>
-
       <!-- Severity -->
       <AppCard style="padding:20px">
         <MonoLabel style="display:block; margin-bottom:12px">Minimum severity</MonoLabel>
@@ -77,7 +71,7 @@
         <div class="channel-row">
           <div>
             <div class="channel-label">Email notifications</div>
-            <div class="channel-sub">viktor@example.com</div>
+            <div class="channel-sub">{{ authStore.user?.email ?? '' }}</div>
           </div>
           <ToggleSwitch v-model="emailEnabled" />
         </div>
@@ -85,8 +79,8 @@
 
       <!-- Actions -->
       <div class="form-actions">
-        <AppButton variant="primary" size="md" style="flex:1" @click="save">
-          {{ isEdit ? 'Save changes' : 'Create rule' }}
+        <AppButton variant="primary" size="md" style="flex:1" :disabled="saving" @click="save">
+          {{ saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create rule' }}
         </AppButton>
         <AppButton variant="ghost" size="md" @click="$router.push('/app/alerts')">
           Cancel
@@ -97,11 +91,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Severity } from 'src/types/threat'
-import { ALERT_RULES } from 'src/data/mockData'
+import { alertsService } from 'src/services/alerts.service'
 import { useSeverity } from 'src/composables/useSeverity'
+import { useAuthStore } from 'src/stores/auth'
 import PageTitle from 'src/components/PageTitle.vue'
 import AppCard from 'src/components/AppCard.vue'
 import AppInput from 'src/components/AppInput.vue'
@@ -110,25 +105,26 @@ import AppTag from 'src/components/AppTag.vue'
 import MonoLabel from 'src/components/MonoLabel.vue'
 import ToggleSwitch from 'src/components/ToggleSwitch.vue'
 
-const route  = useRoute()
-const router = useRouter()
+const route     = useRoute()
+const router    = useRouter()
+const authStore = useAuthStore()
 const { sevColor } = useSeverity()
 
 const SEVERITIES: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO']
 const ALL_STACK = ['spring-boot', 'postgresql', 'kafka', 'redis', 'docker']
 
 const isEdit  = computed(() => !!route.params['id'])
-const existing = computed(() => ALERT_RULES.find(r => r.id === Number(route.params['id'])))
+const ruleId  = computed(() => Number(route.params['id']))
 
-const name         = ref(existing.value?.name     ?? '')
-const severity     = ref<Severity>(existing.value?.severity ?? 'HIGH')
-const tech         = ref<string[]>([...(existing.value?.tech ?? [])])
+const severity     = ref<Severity>('HIGH')
+const tech         = ref<string[]>([])
 const emailEnabled = ref(true)
 const techInput    = ref('')
+const saving       = ref(false)
 
-const quickTech    = computed(() => ALL_STACK.filter(t => !tech.value.includes(t)))
+const quickTech   = computed(() => ALL_STACK.filter(t => !tech.value.includes(t)))
 
-const willAlertOn  = computed(() =>
+const willAlertOn = computed(() =>
   SEVERITIES.slice(0, SEVERITIES.indexOf(severity.value) + 1)
 )
 
@@ -154,9 +150,29 @@ function addCustomTech() {
   if (t) { addTech(t); techInput.value = '' }
 }
 
-function save() {
-  void router.push('/app/alerts')
+async function save() {
+  saving.value = true
+  try {
+    if (isEdit.value) {
+      await alertsService.updateRule(ruleId.value, severity.value, tech.value)
+    } else {
+      await alertsService.createRule(severity.value, tech.value)
+    }
+    void router.push('/app/alerts')
+  } finally {
+    saving.value = false
+  }
 }
+
+onMounted(async () => {
+  if (!isEdit.value) return
+  const rules = await alertsService.getRules()
+  const existing = rules.find(r => r.id === ruleId.value)
+  if (existing) {
+    severity.value = existing.minSeverity
+    tech.value = [...existing.technologiesFilter]
+  }
+})
 </script>
 
 <style scoped>

@@ -114,8 +114,8 @@ const { sevColor } = useSeverity()
 const SEVERITIES: Severity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
 const ALL_TECH = ['spring-boot', 'postgresql', 'kafka', 'redis', 'docker', 'nginx', 'node.js', 'mongodb']
 
-const name       = ref('Viktor Hutsuliak')
-const email      = ref('viktor@example.com')
+const name       = ref('')
+const email      = ref('')
 const stack      = ref([...USER_STACK])
 const stackInput = ref('')
 const minSev     = ref<Severity>('HIGH')

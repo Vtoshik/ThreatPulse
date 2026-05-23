@@ -43,10 +43,10 @@
 
       <!-- User -->
       <div class="sidebar__user">
-        <div class="sidebar__avatar">V</div>
+        <div class="sidebar__avatar">{{ authStore.user?.name?.charAt(0).toUpperCase() ?? '?' }}</div>
         <div class="sidebar__user-info">
-          <div class="sidebar__user-name">v.hutsuliak</div>
-          <div class="sidebar__user-email">viktor@example.com</div>
+          <div class="sidebar__user-name">{{ authStore.user?.name ?? '' }}</div>
+          <div class="sidebar__user-email">{{ authStore.user?.email ?? '' }}</div>
         </div>
         <span class="sidebar__logout" title="Sign out" @click="handleLogout">↩</span>
       </div>
@@ -77,9 +77,11 @@
 import { useRoute, useRouter } from 'vue-router'
 import MonoLabel from 'src/components/MonoLabel.vue'
 import { USER_STACK } from 'src/data/mockData'
+import { useAuthStore } from 'src/stores/auth'
 
-const route  = useRoute()
-const router = useRouter()
+const route     = useRoute()
+const router    = useRouter()
+const authStore = useAuthStore()
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard',   icon: '◈', to: '/app/dashboard' },

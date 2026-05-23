@@ -64,7 +64,7 @@ import { useAuthStore } from 'src/stores/auth'
 import { useQuasar } from 'quasar'
 
 const router  = useRouter()
-const email   = ref('viktor@example.com')
+const email   = ref('')
 const password = ref('')
 const authStore = useAuthStore();
 const $q = useQuasar();
