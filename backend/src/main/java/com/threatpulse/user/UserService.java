@@ -1,5 +1,6 @@
 package com.threatpulse.user;
 
+import com.threatpulse.common.domain.Severity;
 import com.threatpulse.user.dto.UpdatePreferencesRequest;
 import com.threatpulse.user.dto.UserProfileResponse;
 import lombok.RequiredArgsConstructor;
@@ -38,9 +39,17 @@ public class UserService {
     }
 
     public void updatePreferences(User user, UpdatePreferencesRequest request){
-        UserPreferences userPreferences = userPreferencesRepository.findByUser(user).orElseThrow(
+        User managedUser = userRepository.findById(user.getId()).orElseThrow(
                 () -> new RuntimeException("User not found")
         );
+
+        UserPreferences userPreferences = userPreferencesRepository.findByUser(managedUser)
+                .orElseGet(() -> {
+                    UserPreferences prefs = new UserPreferences();
+                    prefs.setUser(managedUser);
+                    prefs.setMinSeverity(Severity.HIGH);
+                    return prefs;
+                });
 
         userPreferences.setMinSeverity(request.minSeverity());
         userPreferences.setEmailAlertsEnabled(request.emailAlertsEnabled());

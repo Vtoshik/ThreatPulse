@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -20,6 +21,7 @@ public class AlertScheduler {
     private final AlertService alertService;
     private final ThreatRepository threatRepository;
 
+    @Transactional
     @Scheduled(initialDelay = 60_000, fixedDelay = 10 * 60 * 1000)
     public void checkRecentThreats() {
         OffsetDateTime since = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
