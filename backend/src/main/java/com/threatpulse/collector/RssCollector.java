@@ -25,9 +25,10 @@ public class RssCollector {
     private static final List<String> RSS_FEEDS = List.of(
             "https://feeds.feedburner.com/TheHackersNews",
             "https://www.bleepingcomputer.com/feed/",
-            "https://krebsonsecurity.com/feed/",
-            "https://threatpost.com/feed/"
+            "https://krebsonsecurity.com/feed/"
     );
+
+    private static final int MAX_ARTICLE_AGE_DAYS = 30;
 
     public void collect() {
         for (String feedUrl : RSS_FEEDS) {
@@ -60,6 +61,10 @@ public class RssCollector {
                 OffsetDateTime published = entry.getPublishedDate() != null
                         ? entry.getPublishedDate().toInstant().atOffset(ZoneOffset.UTC)
                         : OffsetDateTime.now(ZoneOffset.UTC);
+
+                if (published.isBefore(OffsetDateTime.now(ZoneOffset.UTC).minusDays(MAX_ARTICLE_AGE_DAYS))) {
+                    continue;
+                }
 
                 RawThreatEvent event = new RawThreatEvent(
                         externalId, title, description, sourceUrl, sourceName, published, "RSS"
