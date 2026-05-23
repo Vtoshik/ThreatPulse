@@ -77,15 +77,27 @@ public class GroqAiClient {
 
     private String buildPrompt(String title, String description) {
         return """
-                Analyze this cybersecurity threat and respond with ONLY a JSON object:
+                You are analyzing a cybersecurity item (may be a vulnerability, attack, breach, or security news).
+                Respond with ONLY a valid JSON object — no markdown, no explanation.
+
+                Rules:
+                - summary: ALWAYS provide 2-4 sentences. Explain what happened, who is affected, and the risk.
+                  If this is a security improvement or fix (not an attack), describe what protection it adds.
+                - severity: CRITICAL (active exploitation/RCE), HIGH (serious vuln), MEDIUM (limited impact),
+                  LOW (minor risk), INFO (news, fixes, advisories with no active threat)
+                - category: RCE, XSS, SQLI, DATA_BREACH, SUPPLY_CHAIN, OTHER
+                - affected_technologies: list of specific tech names (e.g. "nginx", "spring-boot", "npm").
+                  Empty array [] only if truly generic with no specific tech mentioned.
+                - recommended_action: one concrete sentence for a developer
+
                 {
-                    "summary": "2-3 sentence plain English summary",
+                    "summary": "...",
                     "severity": "CRITICAL|HIGH|MEDIUM|LOW|INFO",
-                    "category": "RCE|XSS|SQLI|DATA_BREACH|OTHER",
+                    "category": "RCE|XSS|SQLI|DATA_BREACH|SUPPLY_CHAIN|OTHER",
                     "affected_technologies": ["tech1", "tech2"],
-                    "recommended_action": "one sentence action"
+                    "recommended_action": "..."
                 }
-                
+
                 Title: %s
                 Description: %s
                 """.formatted(title, description);

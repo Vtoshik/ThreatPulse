@@ -47,8 +47,21 @@ export const useAuthStore = defineStore('auth', {
         logout() {
             this.accessToken = null;
             this.user = null;
-
             localStorage.removeItem("token");
+        },
+
+        async restoreSession() {
+            const token = localStorage.getItem("token");
+            if (!token || this.user) return;
+            this.accessToken = token;
+            try {
+                const res = await axiosInstanse.get('/api/user/profile');
+                const p = res.data;
+                this.user = { id: p.id, name: p.username, email: p.email, technologies: p.technologies ?? [] };
+            } catch {
+                this.accessToken = null;
+                localStorage.removeItem("token");
+            }
         },
         
         async register(username: string, email: string, password: string, 

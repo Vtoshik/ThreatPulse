@@ -41,24 +41,21 @@
         <div class="detail-left">
           <AppCard style="padding:20px">
             <div class="detail-section-header">
-              <MonoLabel>AI Summary</MonoLabel>
-              <span class="detail-model-tag">Groq · Llama 3.3</span>
+              <MonoLabel>{{ threat.summary ? 'AI Summary' : 'Description' }}</MonoLabel>
+              <span v-if="threat.summary" class="detail-model-tag">Groq · Llama 3.3</span>
             </div>
             <p class="detail-summary">
-              {{ threat.summary || 'No AI summary is available for this threat yet.' }}
+              {{ threat.summary || threat.description || 'No summary available for this threat.' }}
             </p>
           </AppCard>
 
-          <AppCard style="padding:20px">
+          <AppCard v-if="affectedTechnologies.length" style="padding:20px">
             <MonoLabel style="display:block; margin-bottom:14px">Affected Technologies</MonoLabel>
-            <div v-if="affectedTechnologies.length" class="affected-list">
+            <div class="affected-list">
               <div v-for="tech in affectedTechnologies" :key="tech" class="affected-row">
                 <span class="affected-dot" />
                 <span class="affected-label">{{ tech }}</span>
               </div>
-            </div>
-            <div v-else class="detail-empty-inline">
-              <MonoLabel>No affected technologies returned by the API</MonoLabel>
             </div>
           </AppCard>
         </div>

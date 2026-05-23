@@ -79,6 +79,7 @@ export function mapThreat(apiThreat: ApiThreat): Threat {
     score: threatScore(apiThreat.severity),
     published: formatPublishedAt(apiThreat.publishedAt),
     ...(apiThreat.aiSummary != null ? { summary: apiThreat.aiSummary } : {}),
+    ...(apiThreat.description != null ? { description: apiThreat.description } : {}),
     affected: affectedTechnologies,
     source: apiThreat.sourceName,
     sourceName: apiThreat.sourceName,

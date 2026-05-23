@@ -17,6 +17,7 @@ export interface Threat {
   score: number
   published: string
   summary?: string
+  description?: string
   affected?: string[]
   patch?: string
   vector?: string
@@ -33,6 +34,7 @@ export interface ApiThreat {
   id: number
   externalId: string
   title: string
+  description?: string | null
   aiSummary?: string | null
   severity: Severity
   threatCategory?: ThreatCategory | null

@@ -4,11 +4,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import IntroSequence from 'src/components/IntroSequence.vue'
+import { useAuthStore } from 'src/stores/auth'
 
-// The intro plays once per browser session, and only when the visitor lands
-// on a public entry route. Deep links into the app skip it.
+const authStore = useAuthStore()
+
 const SEEN_KEY = 'tp_intro_seen'
 
 function shouldShowIntro(): boolean {
@@ -19,4 +20,6 @@ function shouldShowIntro(): boolean {
 
 const showIntro = ref(shouldShowIntro())
 if (showIntro.value) sessionStorage.setItem(SEEN_KEY, '1')
+
+onMounted(() => { void authStore.restoreSession() })
 </script>

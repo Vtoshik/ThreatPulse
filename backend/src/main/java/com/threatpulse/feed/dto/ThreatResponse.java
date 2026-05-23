@@ -16,6 +16,7 @@ public record ThreatResponse (
     Long id,
     String externalId,
     String title,
+    String description,
     String aiSummary,
     Severity severity,
     ThreatCategory threatCategory,
