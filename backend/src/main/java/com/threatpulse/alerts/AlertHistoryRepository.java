@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface AlertHistoryRepository extends JpaRepository<AlertHistory, Long> {
     List<AlertHistory> findByUser(User user);
+    boolean existsByUserIdAndThreatId(Long userId, Long threatId);
 }

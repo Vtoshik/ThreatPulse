@@ -77,23 +77,45 @@ public class AlertService {
                     "Threat not found for externalId=" + event.externalId()
                 )
             );
-        // Send alert and save history for each user
-        emailNotifier.sendAlert(
-            emailsToNotify,
-            event.title(),
-            event.aiSummary()
-        );
 
         for (User user : users) {
-            AlertHistory alertHistory = new AlertHistory();
-            alertHistory.setThreat(threat);
-            alertHistory.setChannel("EMAIL");
-            alertHistory.setUser(user);
-            alertHistoryRepository.save(alertHistory);
-            if (kafkaTemplate != null) {
-                kafkaTemplate.send(KafkaConfig.ALERT_TRIGGERS_TOPIC, new AlertTriggerEvent(
-                        user.getId(), event.title(), severity, threat.getId()));
-            }
+            sendAlertToUser(user, threat, event.title(), event.aiSummary(), severity);
+        }
+    }
+
+    @Transactional
+    public void checkAndNotifyForThreat(Threat threat) {
+        if (threat.getSeverity() == null || threat.getAiSummary() == null) return;
+
+        String[] techArray = threat.getAffectedTechnologies() == null
+            ? new String[0]
+            : threat.getAffectedTechnologies().toArray(new String[0]);
+
+        List<AlertRule> matchingRules = alertRuleRepository
+            .findMatchingRules(threat.getSeverity().name(), techArray);
+
+        for (AlertRule rule : matchingRules) {
+            sendAlertToUser(rule.getUser(), threat, threat.getTitle(),
+                threat.getAiSummary(), threat.getSeverity());
+        }
+    }
+
+    private void sendAlertToUser(User user, Threat threat, String subject,
+                                 String htmlContent, Severity severity) {
+        if (alertHistoryRepository.existsByUserIdAndThreatId(user.getId(), threat.getId())) {
+            return;
+        }
+        emailNotifier.sendAlert(new String[]{ user.getEmail() }, subject, htmlContent);
+
+        AlertHistory history = new AlertHistory();
+        history.setThreat(threat);
+        history.setChannel("EMAIL");
+        history.setUser(user);
+        alertHistoryRepository.save(history);
+
+        if (kafkaTemplate != null) {
+            kafkaTemplate.send(KafkaConfig.ALERT_TRIGGERS_TOPIC,
+                new AlertTriggerEvent(user.getId(), subject, severity, threat.getId()));
         }
     }
 
@@ -102,6 +124,7 @@ public class AlertService {
     ) {
         return new AlertRuleResponse(
             alertRule.getId(),
+            alertRule.getName(),
             alertRule.getMinSeverity(),
             alertRule.getTechnologiesFilter(),
             alertRule.isActive()
@@ -116,6 +139,7 @@ public class AlertService {
     public AlertRuleResponse createRule(User user, AlertRuleRequest request) {
         AlertRule rule = new AlertRule();
         rule.setUser(user);
+        rule.setName(request.name());
         rule.setActive(true);
         rule.setMinSeverity(request.minSeverity());
         rule.setTechnologiesFilter(request.technologiesFilter());
@@ -140,8 +164,14 @@ public class AlertService {
             );
         }
 
+        if (request.name() != null) {
+            alertRule.setName(request.name());
+        }
         alertRule.setTechnologiesFilter(request.technologiesFilter());
         alertRule.setMinSeverity(request.minSeverity());
+        if (request.active() != null) {
+            alertRule.setActive(request.active());
+        }
         alertRuleRepository.save(alertRule);
         return mapAlertRuleToResponseObject(alertRule);
     }

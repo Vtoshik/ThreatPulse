@@ -48,7 +48,7 @@ public class FeedService {
      */
     @Cacheable(value = "threats", key = "#page + '-' + #size + '-' + #severity + '-' + #query")
     public ThreatPageResponse getThreats(int page, int size, com.threatpulse.common.domain.Severity severity, String query) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "collectedAt"));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"));
         Specification<Threat> specification = Specification
                 .where(ThreatSpecifications.withSeverity(severity))
                 .and(ThreatSpecifications.matchesQuery(query));

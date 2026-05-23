@@ -8,6 +8,7 @@ export const useAuthStore = defineStore('auth', {
             id: string;
             name: string;
             email: string;
+            technologies: string[];
         },
         isLoading: false,
     }),
@@ -31,9 +32,9 @@ export const useAuthStore = defineStore('auth', {
                 }
                 localStorage.setItem("token", this.accessToken);
 
-                const userResponse = await axiosInstanse.get(
-                    "/api/user/profile");
-                this.user = userResponse.data.user;
+                const userResponse = await axiosInstanse.get('/api/user/profile')
+                const p = userResponse.data
+                this.user = { id: p.id, name: p.username, email: p.email, technologies: p.technologies ?? [] }
 
             } catch (err) {
                 console.log("Login failed:", err);
@@ -64,7 +65,8 @@ export const useAuthStore = defineStore('auth', {
                     throw new Error("Failed to get access token");
                 }
                 localStorage.setItem("token", this.accessToken);
-                this.user = response.data.user;
+                const rp = response.data
+                this.user = { id: rp.user?.id ?? rp.id, name: rp.user?.username ?? rp.username, email: rp.user?.email ?? rp.email, technologies: [] }
 
                 await axiosInstanse.put(
                     "/api/user/technologies",

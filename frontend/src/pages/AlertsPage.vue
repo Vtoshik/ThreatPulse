@@ -3,7 +3,7 @@
     <div class="alerts-header">
       <PageTitle
         title="Alerts"
-        :sub="`${activeCount} active rules · ${ALERT_HISTORY.length} sent today`"
+        :sub="`${activeCount} active rules · ${history.length} sent today`"
       />
       <AppButton variant="primary" size="sm" @click="$router.push('/app/alerts/new')">
         + New rule
@@ -39,15 +39,17 @@
       <div v-else class="rules-list">
         <AppCard v-for="r in rules" :key="r.id" style="padding:14px 18px">
           <div class="rule-row">
-            <ToggleSwitch :model-value="r.active" @update:model-value="toggleRule(r.id)" />
+            <ToggleSwitch :model-value="r.active" @update:model-value="toggleRule(r)" />
 
             <div class="rule-info">
-              <div class="rule-name" :class="{ 'rule-name--muted': !r.active }">{{ r.name }}</div>
+              <div class="rule-name" :class="{ 'rule-name--muted': !r.active }">
+                {{ r.name || (r.minSeverity.charAt(0) + r.minSeverity.slice(1).toLowerCase() + ' and above') }}
+              </div>
               <div class="rule-tags">
-                <SeverityBadge :severity="r.severity" />
-                <template v-if="r.tech.length > 0">
+                <SeverityBadge :severity="r.minSeverity" />
+                <template v-if="r.technologiesFilter.length > 0">
                   <AppTag
-                    v-for="t in r.tech"
+                    v-for="t in r.technologiesFilter"
                     :key="t"
                     :label="t"
                     color="var(--tp-muted)"
@@ -57,20 +59,20 @@
               </div>
             </div>
 
-            <div class="rule-stat">
-              <div
-                class="rule-count"
-                :style="{ color: r.triggered > 0 ? sevColor(r.severity) : 'var(--tp-dimmer)' }"
-              >{{ r.triggered }}</div>
-              <MonoLabel>triggered</MonoLabel>
-            </div>
-
             <AppButton
               variant="ghost"
               size="sm"
               @click="$router.push(`/app/alerts/${r.id}/edit`)"
             >
               Edit
+            </AppButton>
+            <AppButton
+              variant="ghost"
+              size="sm"
+              style="color:var(--tp-dimmer)"
+              @click="deleteRule(r.id)"
+            >
+              Delete
             </AppButton>
           </div>
         </AppCard>
@@ -83,18 +85,23 @@
         <div class="history-header">
           <MonoLabel v-for="h in HISTORY_HEADERS" :key="h">{{ h }}</MonoLabel>
         </div>
+        <EmptyState
+          v-if="history.length === 0"
+          icon="📭"
+          title="No alerts sent yet"
+          desc="Alerts will appear here once a rule matches a new threat."
+          style="padding:24px"
+        />
         <div
-          v-for="a in ALERT_HISTORY"
+          v-for="a in history"
           :key="a.id"
           class="history-row"
         >
           <div>
-            <div class="history-threat">{{ a.threat }}</div>
-            <span class="history-cve">{{ a.cve }}</span>
+            <div class="history-threat">{{ a.threatTitle }}</div>
           </div>
-          <SeverityBadge :severity="a.severity" />
           <span class="history-mono">{{ a.channel.toLowerCase() }}</span>
-          <span class="history-mono">{{ a.sentAt }}</span>
+          <span class="history-mono">{{ formatDate(a.sentAt) }}</span>
         </div>
       </AppCard>
     </template>
@@ -102,9 +109,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { AlertRule } from 'src/types/alert'
-import { ALERT_RULES, ALERT_HISTORY } from 'src/data/mockData'
+import { ref, computed, onMounted } from 'vue'
+import { alertsService, type AlertRuleDto, type AlertHistoryDto } from 'src/services/alerts.service'
 import { useSeverity } from 'src/composables/useSeverity'
 import PageTitle from 'src/components/PageTitle.vue'
 import AppButton from 'src/components/AppButton.vue'
@@ -116,21 +122,52 @@ import ToggleSwitch from 'src/components/ToggleSwitch.vue'
 import EmptyState from 'src/components/EmptyState.vue'
 
 const { sevColor } = useSeverity()
+void sevColor // used in style bindings elsewhere; suppress unused warning
 
 const TABS = [
   { key: 'rules',   label: 'Alert Rules'  },
   { key: 'history', label: 'Send History' },
 ]
-const HISTORY_HEADERS = ['Threat', 'Severity', 'Channel', 'Sent at']
+const HISTORY_HEADERS = ['Threat', 'Channel', 'Sent at']
 
-const activeTab  = ref('rules')
-const rules      = ref<AlertRule[]>([...ALERT_RULES])
+const activeTab   = ref('rules')
+const rules       = ref<AlertRuleDto[]>([])
+const history     = ref<AlertHistoryDto[]>([])
+const loading     = ref(false)
 const activeCount = computed(() => rules.value.filter(r => r.active).length)
 
-function toggleRule(id: number) {
-  const r = rules.value.find(r => r.id === id)
-  if (r) r.active = !r.active
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleString()
 }
+
+async function loadRules() {
+  loading.value = true
+  try {
+    rules.value = await alertsService.getRules()
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadHistory() {
+  history.value = await alertsService.getHistory()
+}
+
+async function toggleRule(rule: AlertRuleDto) {
+  const updated = await alertsService.toggleRule(rule)
+  const idx = rules.value.findIndex(r => r.id === rule.id)
+  if (idx !== -1) rules.value[idx] = updated
+}
+
+async function deleteRule(id: number) {
+  await alertsService.deleteRule(id)
+  rules.value = rules.value.filter(r => r.id !== id)
+}
+
+onMounted(() => {
+  void loadRules()
+  void loadHistory()
+})
 </script>
 
 <style scoped>
@@ -212,22 +249,11 @@ function toggleRule(id: number) {
   flex-wrap: wrap;
 }
 
-.rule-stat {
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.rule-count {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.8px;
-}
-
 .history-header {
   padding: 9px 18px;
   box-shadow: inset 0 -1px 0 var(--tp-border);
   display: grid;
-  grid-template-columns: 1fr 90px 80px 120px;
+  grid-template-columns: 1fr 80px 140px;
   gap: 12px;
   align-items: center;
 }
@@ -236,7 +262,7 @@ function toggleRule(id: number) {
   padding: 11px 18px;
   box-shadow: inset 0 -1px 0 var(--tp-border);
   display: grid;
-  grid-template-columns: 1fr 90px 80px 120px;
+  grid-template-columns: 1fr 80px 140px;
   gap: 12px;
   align-items: center;
 }
@@ -244,13 +270,6 @@ function toggleRule(id: number) {
 .history-threat {
   font-size: 12px;
   margin-bottom: 2px;
-}
-
-.history-cve {
-  font-family: var(--tp-mono);
-  font-size: 10px;
-  color: var(--tp-muted);
-  letter-spacing: 0.3px;
 }
 
 .history-mono {

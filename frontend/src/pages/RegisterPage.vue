@@ -21,7 +21,7 @@
           <div class="auth-form">
             <div class="auth-form__field">
               <MonoLabel style="display:block; margin-bottom:6px">Name</MonoLabel>
-              <AppInput v-model="form.name" placeholder="Viktor Hutsuliak" />
+              <AppInput v-model="form.name" placeholder="Your name" />
             </div>
             <div class="auth-form__field">
               <MonoLabel style="display:block; margin-bottom:6px">Email</MonoLabel>
