@@ -20,9 +20,9 @@ public class AlertScheduler {
     private final AlertService alertService;
     private final ThreatRepository threatRepository;
 
-    @Scheduled(fixedDelay = 10 * 60 * 1000)
+    @Scheduled(initialDelay = 60_000, fixedDelay = 10 * 60 * 1000)
     public void checkRecentThreats() {
-        OffsetDateTime since = OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(15);
+        OffsetDateTime since = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
         List<Threat> recent = threatRepository.findByAnalyzedAtAfter(since);
         if (recent.isEmpty()) return;
         log.info("AlertScheduler: checking {} recent threats against alert rules", recent.size());
