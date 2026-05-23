@@ -35,7 +35,8 @@
       <!-- Stack -->
       <div class="sidebar__stack">
         <MonoLabel style="display:block; margin-bottom:8px">Your Stack</MonoLabel>
-        <div v-for="tech in USER_STACK" :key="tech" class="sidebar__stack-item">
+        <div v-if="!authStore.user?.technologies?.length" class="sidebar__stack-empty">not set</div>
+        <div v-for="tech in authStore.user?.technologies" :key="tech" class="sidebar__stack-item">
           <span class="sidebar__stack-dot" />
           <span class="sidebar__stack-name">{{ tech }}</span>
         </div>
@@ -76,18 +77,17 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import MonoLabel from 'src/components/MonoLabel.vue'
-import { USER_STACK } from 'src/data/mockData'
 import { useAuthStore } from 'src/stores/auth'
 
 const route     = useRoute()
 const router    = useRouter()
 const authStore = useAuthStore()
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { id: string; label: string; icon: string; to: string; badge?: number }[] = [
   { id: 'dashboard', label: 'Dashboard',   icon: '◈', to: '/app/dashboard' },
   { id: 'feed',      label: 'Threat Feed', icon: '⊟', to: '/app/feed'      },
   { id: 'search',    label: 'Search',      icon: '⌕', to: '/app/search'    },
-  { id: 'alerts',    label: 'Alerts',      icon: '⚐', to: '/app/alerts', badge: 3 },
+  { id: 'alerts',    label: 'Alerts',      icon: '⚐', to: '/app/alerts' },
   { id: 'watchlist', label: 'Watchlist',   icon: '◎', to: '/app/watchlist' },
   { id: 'settings',  label: 'Settings',    icon: '⚙', to: '/app/settings'  },
 ]
@@ -208,6 +208,12 @@ function handleLogout() {
 .sidebar__stack {
   padding: 12px 20px;
   box-shadow: inset 0 1px 0 var(--tp-border);
+}
+
+.sidebar__stack-empty {
+  font-family: var(--tp-mono);
+  font-size: 11px;
+  color: var(--tp-dimmer);
 }
 
 .sidebar__stack-item {

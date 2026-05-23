@@ -8,6 +8,12 @@
     />
 
     <div class="rule-form">
+      <!-- Name -->
+      <AppCard style="padding:20px">
+        <MonoLabel style="display:block; margin-bottom:8px">Rule name</MonoLabel>
+        <AppInput v-model="name" placeholder='e.g. "Critical in my stack"' />
+      </AppCard>
+
       <!-- Severity -->
       <AppCard style="padding:20px">
         <MonoLabel style="display:block; margin-bottom:12px">Minimum severity</MonoLabel>
@@ -116,6 +122,7 @@ const ALL_STACK = ['spring-boot', 'postgresql', 'kafka', 'redis', 'docker']
 const isEdit  = computed(() => !!route.params['id'])
 const ruleId  = computed(() => Number(route.params['id']))
 
+const name         = ref('')
 const severity     = ref<Severity>('HIGH')
 const tech         = ref<string[]>([])
 const emailEnabled = ref(true)
@@ -154,9 +161,9 @@ async function save() {
   saving.value = true
   try {
     if (isEdit.value) {
-      await alertsService.updateRule(ruleId.value, severity.value, tech.value)
+      await alertsService.updateRule(ruleId.value, name.value, severity.value, tech.value)
     } else {
-      await alertsService.createRule(severity.value, tech.value)
+      await alertsService.createRule(name.value, severity.value, tech.value)
     }
     void router.push('/app/alerts')
   } finally {
@@ -169,6 +176,7 @@ onMounted(async () => {
   const rules = await alertsService.getRules()
   const existing = rules.find(r => r.id === ruleId.value)
   if (existing) {
+    name.value = existing.name ?? ''
     severity.value = existing.minSeverity
     tech.value = [...existing.technologiesFilter]
   }

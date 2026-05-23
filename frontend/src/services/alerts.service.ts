@@ -3,6 +3,7 @@ import type { Severity } from 'src/types/threat'
 
 export interface AlertRuleDto {
   id: number
+  name: string | null
   minSeverity: Severity
   technologiesFilter: string[]
   active: boolean
@@ -21,16 +22,17 @@ export const alertsService = {
     return api.get<AlertRuleDto[]>('/api/alerts/rules').then(r => r.data)
   },
 
-  createRule(minSeverity: Severity, technologiesFilter: string[]): Promise<AlertRuleDto> {
-    return api.post<AlertRuleDto>('/api/alerts/rules', { minSeverity, technologiesFilter }).then(r => r.data)
+  createRule(name: string, minSeverity: Severity, technologiesFilter: string[]): Promise<AlertRuleDto> {
+    return api.post<AlertRuleDto>('/api/alerts/rules', { name, minSeverity, technologiesFilter }).then(r => r.data)
   },
 
-  updateRule(id: number, minSeverity: Severity, technologiesFilter: string[], active?: boolean): Promise<AlertRuleDto> {
-    return api.put<AlertRuleDto>(`/api/alerts/rules/${id}`, { minSeverity, technologiesFilter, active }).then(r => r.data)
+  updateRule(id: number, name: string, minSeverity: Severity, technologiesFilter: string[], active?: boolean): Promise<AlertRuleDto> {
+    return api.put<AlertRuleDto>(`/api/alerts/rules/${id}`, { name, minSeverity, technologiesFilter, active }).then(r => r.data)
   },
 
   toggleRule(rule: AlertRuleDto): Promise<AlertRuleDto> {
     return api.put<AlertRuleDto>(`/api/alerts/rules/${rule.id}`, {
+      name: rule.name,
       minSeverity: rule.minSeverity,
       technologiesFilter: rule.technologiesFilter,
       active: !rule.active,

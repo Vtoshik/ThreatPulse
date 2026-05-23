@@ -35,14 +35,17 @@ public class EmailNotifier {
         );
 
         try {
-            String response = restClient.post()
+            restClient.post()
                     .uri("/emails")
                     .body(requestBody)
                     .retrieve()
                     .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-                            (req, res) -> log.error("Resend API error: {} - {}", res.getStatusCode(), res.getBody()))
-                    .body(String.class);
-
+                            (req, res) -> {
+                                String body = new String(res.getBody().readAllBytes());
+                                log.error("Resend API error: {} — {}", res.getStatusCode(), body);
+                            })
+                    .toBodilessEntity();
+            log.info("Alert email sent to {} recipients, subject: {}", toEmail.length, subject);
         } catch (Exception e) {
             log.error("Resend API call failed for subject: {}", subject, e);
         }

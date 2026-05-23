@@ -38,6 +38,9 @@ public class AlertRule {
     @Column(name = "technologies_filter", columnDefinition = "TEXT[]")
     private String[] technologiesFilter;
 
+    @Column(name = "name")
+    private String name;
+
     @Column(name = "active", nullable = false)
     private boolean active;
 

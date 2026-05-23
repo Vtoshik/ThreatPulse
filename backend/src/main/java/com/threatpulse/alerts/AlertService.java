@@ -102,6 +102,7 @@ public class AlertService {
     ) {
         return new AlertRuleResponse(
             alertRule.getId(),
+            alertRule.getName(),
             alertRule.getMinSeverity(),
             alertRule.getTechnologiesFilter(),
             alertRule.isActive()
@@ -116,6 +117,7 @@ public class AlertService {
     public AlertRuleResponse createRule(User user, AlertRuleRequest request) {
         AlertRule rule = new AlertRule();
         rule.setUser(user);
+        rule.setName(request.name());
         rule.setActive(true);
         rule.setMinSeverity(request.minSeverity());
         rule.setTechnologiesFilter(request.technologiesFilter());
@@ -140,8 +142,14 @@ public class AlertService {
             );
         }
 
+        if (request.name() != null) {
+            alertRule.setName(request.name());
+        }
         alertRule.setTechnologiesFilter(request.technologiesFilter());
         alertRule.setMinSeverity(request.minSeverity());
+        if (request.active() != null) {
+            alertRule.setActive(request.active());
+        }
         alertRuleRepository.save(alertRule);
         return mapAlertRuleToResponseObject(alertRule);
     }

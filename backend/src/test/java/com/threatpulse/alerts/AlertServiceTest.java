@@ -67,8 +67,10 @@ public class AlertServiceTest {
         user.setId(1L);
 
         AlertRuleRequest request = new AlertRuleRequest(
+                "Test rule",
                 Severity.HIGH,
-                new String[]{"kafka"}
+                new String[]{"kafka"},
+                null
         );
 
         AlertRuleResponse response = alertService.createRule(user, request);

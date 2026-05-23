@@ -43,7 +43,7 @@
 
             <div class="rule-info">
               <div class="rule-name" :class="{ 'rule-name--muted': !r.active }">
-                {{ r.minSeverity.charAt(0) + r.minSeverity.slice(1).toLowerCase() }} and above
+                {{ r.name || (r.minSeverity.charAt(0) + r.minSeverity.slice(1).toLowerCase() + ' and above') }}
               </div>
               <div class="rule-tags">
                 <SeverityBadge :severity="r.minSeverity" />
