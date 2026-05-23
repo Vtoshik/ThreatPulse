@@ -348,4 +348,16 @@ function openSource() {
   text-align: right;
   line-height: 1.5;
 }
+
+@media (max-width: 768px) {
+  .feed-filters { padding: 8px 14px; }
+  .filter-tab { padding: 5px 10px; font-size: 10px; }
+  .feed-table-header { display: none; }
+  .feed-detail {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    z-index: 100;
+  }
+}
 </style>

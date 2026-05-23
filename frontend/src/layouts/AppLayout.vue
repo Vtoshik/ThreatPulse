@@ -1,7 +1,10 @@
 <template>
   <div class="app-shell">
+    <!-- Mobile backdrop -->
+    <div v-if="sidebarOpen" class="sidebar-backdrop" @click="sidebarOpen = false" />
+
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ 'sidebar--open': sidebarOpen }">
       <!-- Logo -->
       <div class="sidebar__logo">
         <div class="sidebar__logo-mark">
@@ -36,10 +39,11 @@
       <div class="sidebar__stack">
         <MonoLabel style="display:block; margin-bottom:8px">Your Stack</MonoLabel>
         <div v-if="!authStore.user?.technologies?.length" class="sidebar__stack-empty">not set</div>
-        <div v-for="tech in authStore.user?.technologies" :key="tech" class="sidebar__stack-item">
+        <div v-for="tech in displayedStack" :key="tech" class="sidebar__stack-item">
           <span class="sidebar__stack-dot" />
           <span class="sidebar__stack-name">{{ tech }}</span>
         </div>
+        <div v-if="extraStackCount > 0" class="sidebar__stack-more">+ {{ extraStackCount }} more</div>
       </div>
 
       <!-- User -->
@@ -49,7 +53,7 @@
           <div class="sidebar__user-name">{{ authStore.user?.name ?? '' }}</div>
           <div class="sidebar__user-email">{{ authStore.user?.email ?? '' }}</div>
         </div>
-        <span class="sidebar__logout" title="Sign out" @click="handleLogout">↩</span>
+        <button class="sidebar__logout" title="Sign out" @click="handleLogout">Sign out</button>
       </div>
     </aside>
 
@@ -57,6 +61,9 @@
     <div class="app-main">
       <!-- Top bar -->
       <header class="topbar">
+        <button class="topbar__hamburger" aria-label="Menu" @click="sidebarOpen = !sidebarOpen">
+          <span /><span /><span />
+        </button>
         <div class="topbar__title">
           <span class="topbar__title-main">{{ route.meta.title as string }}</span>
           <span v-if="route.meta.sub" class="topbar__title-sub"> {{ route.meta.sub }}</span>
@@ -75,6 +82,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MonoLabel from 'src/components/MonoLabel.vue'
 import { useAuthStore } from 'src/stores/auth'
@@ -82,6 +90,13 @@ import { useAuthStore } from 'src/stores/auth'
 const route     = useRoute()
 const router    = useRouter()
 const authStore = useAuthStore()
+
+const sidebarOpen = ref(false)
+watch(() => route.path, () => { sidebarOpen.value = false })
+
+const STACK_LIMIT = 5
+const displayedStack = computed(() => authStore.user?.technologies?.slice(0, STACK_LIMIT) ?? [])
+const extraStackCount = computed(() => Math.max(0, (authStore.user?.technologies?.length ?? 0) - STACK_LIMIT))
 
 const NAV_ITEMS: { id: string; label: string; icon: string; to: string; badge?: number }[] = [
   { id: 'dashboard', label: 'Dashboard',   icon: '◈', to: '/app/dashboard' },
@@ -216,6 +231,13 @@ function handleLogout() {
   color: var(--tp-dimmer);
 }
 
+.sidebar__stack-more {
+  font-family: var(--tp-mono);
+  font-size: 10px;
+  color: var(--tp-dimmer);
+  padding-top: 2px;
+}
+
 .sidebar__stack-item {
   display: flex;
   align-items: center;
@@ -289,13 +311,19 @@ function handleLogout() {
 .sidebar__logout {
   cursor: pointer;
   color: var(--tp-muted);
-  font-size: 12px;
-  opacity: 0.6;
+  font-size: 10px;
+  font-family: var(--tp-mono);
+  background: var(--tp-surf2);
+  border: none;
+  border-radius: 4px;
+  padding: 3px 7px;
   flex-shrink: 0;
+  transition: color 0.1s, background 0.1s;
 }
 
 .sidebar__logout:hover {
-  opacity: 1;
+  color: var(--tp-text);
+  background: var(--tp-surf3);
 }
 
 /* ── Main ── */
@@ -349,5 +377,64 @@ function handleLogout() {
 .app-content {
   flex: 1;
   overflow: auto;
+}
+
+/* ── Hamburger (hidden on desktop) ── */
+.topbar__hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.topbar__hamburger span {
+  display: block;
+  height: 1.5px;
+  background: var(--tp-muted);
+  border-radius: 2px;
+  transition: background 0.1s;
+}
+
+.topbar__hamburger:hover span { background: var(--tp-text); }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .topbar__hamburger { display: flex; }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: none;
+  }
+
+  .sidebar--open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .topbar {
+    padding: 0 16px;
+  }
+
+  .topbar__title-sub { display: none; }
 }
 </style>
