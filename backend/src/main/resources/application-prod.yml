@@ -12,6 +12,9 @@ spring:
     redis:
       url: ${REDIS_URL}
 
+  cache:
+    type: none
+
 server:
   port: ${PORT:8080}
 
