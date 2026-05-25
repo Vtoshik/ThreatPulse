@@ -14,13 +14,13 @@
       <CveHash :cve="threat.cve" :id="threat.id" />
     </div>
 
-    <span><SeverityBadge :severity="threat.severity" /></span>
+    <span class="threat-row__severity"><SeverityBadge :severity="threat.severity" /></span>
 
-    <span class="threat-row__mono">{{ threat.tech }}</span>
+    <span class="threat-row__mono threat-row__tech">{{ threat.tech }}</span>
 
-    <ScoreBar :score="threat.score" :severity="threat.severity" />
+    <ScoreBar class="threat-row__scorebar" :score="threat.score" :severity="threat.severity" />
 
-    <span class="threat-row__mono">{{ threat.age }}</span>
+    <span class="threat-row__mono threat-row__age">{{ threat.age }}</span>
 
     <button
       class="threat-row__bookmark"
@@ -123,5 +123,22 @@ const selectedStyle = computed(() => {
 
 .threat-row__bookmark:hover {
   color: var(--tp-text);
+}
+
+@media (max-width: 600px) {
+  .threat-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    grid-template-rows: auto auto;
+    gap: 4px 8px;
+    padding: 10px 14px;
+  }
+
+  .threat-row__severity  { grid-area: 1 / 1; align-self: start; padding-top: 1px; }
+  .threat-row__title-col { grid-area: 1 / 2; }
+  .threat-row__age       { grid-area: 1 / 3; align-self: start; font-size: 10px; }
+  .threat-row__bookmark  { grid-area: 1 / 4; align-self: start; opacity: 1; }
+  .threat-row__tech      { grid-area: 2 / 2 / 3 / 5; color: var(--tp-dimmer); font-size: 10px; }
+  .threat-row__scorebar  { display: none; }
 }
 </style>

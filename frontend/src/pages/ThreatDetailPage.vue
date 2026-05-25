@@ -71,10 +71,7 @@
 
           <AppCard style="padding:16px">
             <MonoLabel style="display:block; margin-bottom:12px">Source</MonoLabel>
-            <div class="source-box">
-              <div class="source-name">{{ threat.sourceName }}</div>
-              <div class="source-url">{{ threat.sourceUrl }}</div>
-            </div>
+            <div class="source-name">{{ threat.sourceName }}</div>
           </AppCard>
 
           <div style="display:flex; gap:8px">
@@ -358,22 +355,44 @@ function openSource() {
   line-height: 1.5;
 }
 
-.source-box {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .source-name {
   font-size: 12px;
   color: var(--tp-text);
   font-weight: 500;
 }
 
-.source-url {
-  font-size: 11px;
-  color: var(--tp-muted);
-  line-height: 1.5;
-  word-break: break-word;
+@media (max-width: 640px) {
+  .page-pad { padding: 16px; }
+
+  .detail-back { margin-bottom: 12px; }
+
+  .detail-back__cve {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 160px;
+  }
+
+  .detail-title-row {
+    flex-direction: column-reverse;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .detail-score-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .detail-score-value { font-size: 28px; }
+
+  .detail-h1 { font-size: 19px; }
+
+  .detail-grid { grid-template-columns: 1fr; }
 }
 </style>
