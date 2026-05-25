@@ -59,8 +59,6 @@ export const useAuthStore = defineStore('auth', {
                 const res = await axiosInstanse.get('/api/user/profile')
                 const p = res.data
                 this.user = { id: p.id, name: p.username, email: p.email, technologies: p.technologies ?? [] }
-            } catch (err) {
-                throw err
             } finally {
                 this.isLoading = false
             }
