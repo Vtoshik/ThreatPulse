@@ -379,7 +379,8 @@ function openSource() {
 
 @media (max-width: 768px) {
   .feed-filters { padding: 8px 14px; }
-  .filter-tab { padding: 5px 10px; font-size: 10px; }
+  .filter-tabs { overflow-x: auto; flex-shrink: 0; }
+  .filter-tab { padding: 5px 10px; font-size: 10px; white-space: nowrap; }
   .feed-table-header { display: none; }
   .feed-detail {
     position: fixed;
