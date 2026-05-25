@@ -38,8 +38,8 @@
           <AppButton variant="primary" size="lg" @click="$router.push('/register')">
             Start monitoring free
           </AppButton>
-          <AppButton variant="ghost" size="lg" @click="$router.push('/login')">
-            Sign in
+          <AppButton variant="ghost" size="lg" @click="handleDemo">
+            {{ demoLoading ? 'Loading...' : 'Try Demo' }}
           </AppButton>
         </div>
 
@@ -150,10 +150,25 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AppButton from 'src/components/AppButton.vue'
 import MonoLabel from 'src/components/MonoLabel.vue'
+import { useAuthStore } from 'src/stores/auth'
 
+const router = useRouter()
+const authStore = useAuthStore()
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const demoLoading = ref(false)
+
+async function handleDemo() {
+  demoLoading.value = true
+  try {
+    await authStore.loginDemo()
+    void router.push('/app/feed')
+  } finally {
+    demoLoading.value = false
+  }
+}
 
 type Sev = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 
