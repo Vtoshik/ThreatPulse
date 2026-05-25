@@ -19,7 +19,7 @@
           <path
             class="intro__trace"
             vector-effect="non-scaling-stroke"
-            d="M 0 88 L 150 88 L 168 88 L 178 64 L 188 88 L 330 88 L 348 88 L 360 30 L 372 88 L 470 88 L 486 88 L 496 88 L 503 14 L 510 120 L 517 88 L 760 88"
+            d="M 0 88 L 150 88 L 168 88 L 178 64 L 188 88 L 330 88 L 348 88 L 360 30 L 372 88 L 540 88 L 573 88 L 583 88 L 590 14 L 597 120 L 604 88 L 760 88"
           />
         </svg>
 
@@ -89,7 +89,7 @@ const exiting = ref(false)
 const SPIKES = [
   { cve: 'CVE-2026-2841', label: 'MEDIUM',   color: 'var(--tp-med)',  cx: 178, cy: 64, delay: 0.53 },
   { cve: 'CVE-2026-3107', label: 'HIGH',     color: 'var(--tp-high)', cx: 360, cy: 30, delay: 0.86 },
-  { cve: 'CVE-2026-3399', label: 'CRITICAL', color: 'var(--tp-crit)', cx: 503, cy: 14, delay: 1.13 },
+  { cve: 'CVE-2026-3399', label: 'CRITICAL', color: 'var(--tp-crit)', cx: 590, cy: 14, delay: 1.13 },
 ]
 
 const LOG = [
@@ -425,6 +425,39 @@ onBeforeUnmount(() => {
 @keyframes introBeacon {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.25; }
+}
+
+/* ── Mobile ── */
+@media (max-width: 480px) {
+  .intro__stage { width: 90vw; }
+
+  .intro__log { width: 90vw; margin-top: 18px; gap: 5px; }
+
+  .intro__log-row {
+    grid-template-columns: 72px 1fr auto;
+    gap: 8px;
+    font-size: 10px;
+  }
+
+  .intro__tag { font-size: 9px; }
+
+  .intro__tag-sev { margin-right: 3px; }
+
+  .intro__lockup { margin-top: 28px; gap: 7px; }
+
+  .intro__mark { width: 20px; height: 20px; }
+
+  .intro__word { font-size: 22px; letter-spacing: -1px; }
+
+  .intro__tagline { font-size: 10px; margin-top: 8px; }
+
+  .intro__corner { font-size: 9px; top: 16px; }
+
+  .intro__corner--tl { left: 14px; }
+
+  .intro__corner--tr { right: 14px; }
+
+  .intro__skip { font-size: 10px; bottom: 16px; right: 16px; }
 }
 
 /* ── Reduced motion: skip choreography, hold the final frame ── */

@@ -6,8 +6,8 @@ VALUES (
     NOW()
 ) ON CONFLICT DO NOTHING;
 
-INSERT INTO user_technologies (user_id, technology_name, created_at)
-SELECT id, tech, NOW()
+INSERT INTO user_technologies (user_id, technology_name)
+SELECT id, tech
 FROM users,
      unnest(ARRAY['spring-boot', 'postgresql', 'vue', 'docker', 'kafka', 'redis']) AS tech
 WHERE email = 'demo@threatpulse.app'
