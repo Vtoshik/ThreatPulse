@@ -50,6 +50,22 @@ export const useAuthStore = defineStore('auth', {
             localStorage.removeItem("token");
         },
 
+        async loginDemo() {
+            try {
+                this.isLoading = true;
+                const response = await axiosInstanse.post('/api/auth/demo')
+                this.accessToken = response.data.accessToken
+                localStorage.setItem('token', this.accessToken!)
+                const res = await axiosInstanse.get('/api/user/profile')
+                const p = res.data
+                this.user = { id: p.id, name: p.username, email: p.email, technologies: p.technologies ?? [] }
+            } catch (err) {
+                throw err
+            } finally {
+                this.isLoading = false
+            }
+        },
+
         async restoreSession() {
             const token = localStorage.getItem("token");
             if (!token || this.user) return;

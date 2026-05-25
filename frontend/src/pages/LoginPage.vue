@@ -40,6 +40,16 @@
 
           <div class="auth-form__divider" />
 
+          <AppButton
+            variant="ghost"
+            size="md"
+            style="width:100%"
+            :disabled="authStore.isLoading"
+            @click="handleDemo"
+          >
+            Try Demo
+          </AppButton>
+
           <div class="auth-form__forgot">
             <span class="auth-form__link">Forgot password?</span>
           </div>
@@ -77,6 +87,19 @@ async function handleLogin() {
     $q.notify({
       type: 'negative',
       message: 'Wrong email or password',
+      position: 'top',
+    })
+  }
+}
+
+async function handleDemo() {
+  try {
+    await authStore.loginDemo()
+    void router.push('/app/feed')
+  } catch {
+    $q.notify({
+      type: 'negative',
+      message: 'Demo unavailable, try again later',
       position: 'top',
     })
   }
