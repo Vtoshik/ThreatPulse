@@ -56,6 +56,7 @@
     <aside v-if="selected" class="feed-detail">
       <div class="feed-detail__header">
         <MonoLabel>Selected Threat</MonoLabel>
+        <button class="feed-detail__close" aria-label="Close" @click="selected = null">✕</button>
       </div>
 
       <div class="feed-detail__body">
@@ -94,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Severity, Threat } from 'src/types/threat'
 import { threatService } from 'src/services/threats.service'
@@ -116,6 +117,9 @@ const loadError = ref('')
 const selected = ref<Threat | null>(null)
 const activeFilter = ref<(typeof FILTERS)[number]>('ALL')
 const threats = ref<Threat[]>([])
+const isMobile = ref(window.innerWidth <= 768)
+
+function onResize() { isMobile.value = window.innerWidth <= 768 }
 
 const filteredThreats = computed(() =>
   activeFilter.value === 'ALL'
@@ -160,6 +164,8 @@ watch(filteredThreats, (items) => {
     return
   }
 
+  if (isMobile.value) return
+
   const stillVisible = selected.value && items.some((item) => item.id === selected.value?.id)
   if (!stillVisible) {
     selected.value = items[0] ?? null
@@ -169,6 +175,11 @@ watch(filteredThreats, (items) => {
 onMounted(() => {
   void fetchThreats()
   void bookmarksStore.load()
+  window.addEventListener('resize', onResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onResize)
 })
 
 async function fetchThreats() {
@@ -290,7 +301,24 @@ function openSource() {
 .feed-detail__header {
   padding: 14px 16px;
   box-shadow: inset 0 -1px 0 var(--tp-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+
+.feed-detail__close {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--tp-muted);
+  font-size: 14px;
+  padding: 2px 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.feed-detail__close:hover { color: var(--tp-text); }
 
 .feed-detail__body {
   padding: 16px;
@@ -359,5 +387,6 @@ function openSource() {
     width: 100%;
     z-index: 100;
   }
+  .feed-detail__close { display: block; }
 }
 </style>
