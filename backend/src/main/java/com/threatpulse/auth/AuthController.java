@@ -39,4 +39,10 @@ public class AuthController {
         AuthResponse result = authService.login(request);
         return ResponseEntity.ok(result);
     }
+
+    // POST /api/auth/demo : Returns a JWT for the pre-seeded demo account
+    @PostMapping("/demo")
+    public ResponseEntity<AuthResponse> demo() {
+        return ResponseEntity.ok(authService.loginDemo());
+    }
 }

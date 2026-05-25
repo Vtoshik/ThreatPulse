@@ -56,6 +56,13 @@ public class AuthService {
         return new AuthResponse(jwtService.generateToken(userDetails), "Bearer");
     }
 
+    public AuthResponse loginDemo() {
+        User demoUser = userRepository.findByEmail("demo@threatpulse.app")
+                .orElseThrow(() -> new ThreatPulseException("Demo user not available", 503));
+        UserDetails userDetails = userDetailsService.loadUserByUsername(demoUser.getEmail());
+        return new AuthResponse(jwtService.generateToken(userDetails), "Bearer");
+    }
+
     public AuthResponse login(LoginRequest request) {
         User foundUser = userRepository
                 .findByEmail(request.getEmail()).orElseThrow(()
