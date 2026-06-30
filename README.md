@@ -4,13 +4,39 @@
 
 ---
 
-## The Problem
+## Motivation
 
-Security teams and developers struggle to keep up with the constant flow of CVEs, vulnerability disclosures, and security news. Relevant threats get buried in noise, and by the time a team learns about a critical vulnerability in a library they use — it may be too late.
+CVE feeds and security newsletters dump hundreds of alerts a day. Most of it doesn't apply to what you're running. By the time something relevant shows up, it's buried three pages back. ThreatPulse collects from NVD, RSS feeds, and NewsAPI, runs each threat through an LLM to extract what's actually affected, and only notifies you when it matches your stack.
 
 ## What ThreatPulse Does
 
-ThreatPulse continuously collects threat data from multiple public sources, uses AI to extract structured insights (severity, affected technologies, recommended actions), and matches them against each user's watched tech stack — sending alerts only for what actually matters to them.
+Collects threat data from multiple public sources every two hours, uses AI to extract structured insights (severity, affected technologies, recommended actions), and matches them against each user's tech stack — sending alerts only for what's relevant to them.
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/Vtoshik/threatpulse
+cd threatpulse
+cp backend/src/main/resources/application-dev.yml.example \
+   backend/src/main/resources/application-dev.yml
+# fill in your API keys in application-dev.yml
+docker compose up -d
+cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+Backend runs on `http://localhost:8080`. Frontend is optional — see [Local Development](#local-development).
+
+---
+
+## Usage
+
+Register via `POST /api/auth/register`, then use the JWT token from `POST /api/auth/login` for all subsequent requests.
+
+Set your tech stack via `PUT /api/user/technologies` — this is what ThreatPulse matches against when deciding whether to alert you. Create alert rules via `POST /api/alerts/rules` with a minimum severity and optional technology filter.
+
+The collector runs every two hours automatically. To trigger it manually, restart the backend — it runs on startup as well. New threats appear in `GET /api/threats` once the Groq analysis finishes.
 
 ---
 
