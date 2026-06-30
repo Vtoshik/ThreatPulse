@@ -178,6 +178,20 @@ cd backend && ./mvnw test
 
 ---
 
+## Contributing
+
+This is mostly a personal portfolio project, but if you spotted a bug or have a suggestion, open an issue. If you want to submit a PR, open the issue first so we can talk through it before you write any code.
+
+For pull requests:
+- Branch from `dev`, not `main`
+- Keep it focused — one change per PR
+- If you touched the backend, run `./mvnw test` before submitting
+- Checkstyle handles code style, so just make sure the build passes
+
+If you want to use parts of this in your own project, go ahead.
+
+---
+
 ## Required Environment Variables
 
 | Variable | Description |
