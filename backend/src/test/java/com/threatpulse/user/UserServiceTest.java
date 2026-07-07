@@ -44,6 +44,7 @@ public class UserServiceTest {
 
         UpdatePreferencesRequest request = new UpdatePreferencesRequest(Severity.CRITICAL, true);
 
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userPreferencesRepository.findByUser(user))
                 .thenReturn(Optional.of(existing));
 

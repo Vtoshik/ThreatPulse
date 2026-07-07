@@ -31,7 +31,7 @@ app:
     key: test-fake-key                                                        
   groq:
     api-key: test-fake-key                                                    
-    model: llama-3.3-70b-versatile                          
+    model: openai/gpt-oss-120b
     base-url: https://test.groq.fake                                                     
   huggingface:                                              
     api-key: test-fake-key
