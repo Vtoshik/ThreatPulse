@@ -6,7 +6,7 @@
 
 ## Motivation
 
-CVE feeds and security newsletters dump hundreds of alerts a day. Most of it doesn't apply to what you're running. By the time something relevant shows up, it's buried three pages back. ThreatPulse collects from NVD, RSS feeds, and NewsAPI, runs each threat through an LLM to extract what's actually affected, and only notifies you when it matches your stack.
+CVE feeds and security newsletters dump hundreds of alerts a day. Most of it doesn't apply to what you're running. By the time something relevant shows up, it's buried three pages back. ThreatPulse collects from NVD and RSS feeds, runs each threat through an LLM to extract what's actually affected, and only notifies you when it matches your stack.
 
 ## What ThreatPulse Does
 
@@ -46,15 +46,15 @@ Event-driven modular monolith built on Spring Boot 3 and Apache Kafka.
 
 ```
 [Data Sources]
-NVD/NIST API ─────┐
-Security RSS ──────┼──► Collector ──► Kafka (raw-threats) ──► Analyzer ──► PostgreSQL
-NewsAPI.org ───────┘                                              │
-                                                                  ├──► Kafka (analyzed-threats)
-                                                                  │         │
-                                                                  │    ┌────┴─────────────┐
-                                                                  │    ▼                 ▼
-                                                                  │  Alerts ──► Email   Feed API ──► REST
-                                                                  └──► WebSocket ──► Real-time UI
+NVD/NIST API ─┐
+Security RSS ─┴──► Collector ──► Kafka (raw-threats) ──► Analyzer ──► PostgreSQL
+                                                             │
+                                                             ├──► Kafka (analyzed-threats)
+                                                             │         │
+                                                             │    ┌────┴─────────────┐
+                                                             │    ▼                 ▼
+                                                             │  Alerts ──► Email   Feed API ──► REST
+                                                             └──► WebSocket ──► Real-time UI
 ```
 
 Each module communicates only through Kafka topics or shared DTOs — no direct cross-module calls.
@@ -135,7 +135,8 @@ PUT /api/user/preferences
 ### Backend
 - [x] JWT authentication (register, login)
 - [x] Kafka pipeline: collectors → analyzer → fan-out consumers
-- [x] NVD/NIST CVE collector, RSS feed collector, NewsAPI collector
+- [x] NVD/NIST CVE collector, RSS feed collector
+- [ ] NewsAPI collector
 - [x] Groq AI integration — severity classification, summary, affected technologies
 - [x] Threat feed REST API with pagination
 - [x] Alert rules CRUD with ownership check
@@ -164,6 +165,18 @@ PUT /api/user/preferences
 - [x] Connect to backend REST API (replace mock data)
 - [x] JWT auth flow (login → store token → API interceptor)
 - [x] Real-time WebSocket updates
+
+---
+
+## Roadmap
+
+Highest-impact items planned next, roughly in order:
+
+- **Semantic search via pgvector** — the `embedding` column exists but nothing writes or reads it yet; search is currently keyword-based, not the vector similarity search the architecture targets.
+- **CISA KEV & EPSS enrichment** — flag threats that are known to be actively exploited (CISA KEV) or have a high real-world exploitation probability (EPSS), instead of relying on LLM-inferred severity alone.
+- **Automatic tech-stack detection** — parse a `pom.xml`/`package.json`/SBOM upload to pre-fill a user's technology stack, instead of requiring manual entry.
+- **Stats dashboard** — a `GET /api/threats/stats` endpoint plus charts for severity trends and top affected technologies over time.
+- **Kafka dead-letter queue + LLM fallback** — route unparseable messages to a DLQ instead of retrying indefinitely, and fall back to a heuristic extractor if the Groq API is rate-limited or down.
 
 ---
 
