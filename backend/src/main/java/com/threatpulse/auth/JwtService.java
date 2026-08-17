@@ -35,7 +35,7 @@ public class JwtService {
     }
 
     // Generate a JWT token with subject, issued date, expiration, and signature
-    String generateToken(UserDetails user) {
+    public String generateToken(UserDetails user) {
         return Jwts.builder().subject(user.getUsername()).issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiryHours * 60 * 60 *1000))
                 .signWith(getSigningKey()).compact();

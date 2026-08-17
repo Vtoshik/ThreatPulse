@@ -47,8 +47,11 @@ public class AnalyzerConsumer {
         threat.setSourceUrl(analyzed.sourceUrl());
         threat.setSourceName(analyzed.sourceName());
         threat.setPublishedAt(analyzed.publishedAt());
-        threat.setCollectedAt(OffsetDateTime.now());
-        threat.setAnalyzedAt(OffsetDateTime.now());
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        threat.setCollectedAt(now);
+        threat.setAnalyzedAt(now);
         threat.setAffectedTechnologies(new HashSet<>(analyzed.affectedTechnologies()));
 
         Severity severity;

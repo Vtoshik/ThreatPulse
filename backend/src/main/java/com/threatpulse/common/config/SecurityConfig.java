@@ -3,6 +3,7 @@ package com.threatpulse.common.config;
 import java.util.Arrays;
 import java.util.List;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -56,6 +57,14 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+            .exceptionHandling(ex ->
+                    ex.authenticationEntryPoint((
+                            request,
+                            response,
+                            authException) -> {
+                        response.setHeader("WWW-Authenticate", "Bearer");
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                    }))
                 // Configure endpoint authorization
             .authorizeHttpRequests(auth -> auth
                     // Allow CORS preflight requests
