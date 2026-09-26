@@ -90,6 +90,16 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- ── pgvector support for Hibernate ───────────────────────────────
+		     Lets Hibernate map a Java float[] to a Postgres vector column and
+		     adds HQL functions like cosine_distance(). Not managed by the Spring
+		     Boot BOM, so the version is tied to the Hibernate version in use. -->
+		<dependency>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-vector</artifactId>
+			<version>${hibernate.version}</version>
+		</dependency>
+
 		<!-- ── Flyway (database migrations) ────────────────────────────────
 		     flyway-database-postgresql is required separately for PostgreSQL support -->
 		<dependency>

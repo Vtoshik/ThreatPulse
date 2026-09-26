@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Array;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
@@ -98,4 +99,9 @@ public class Threat {
     @LastModifiedDate
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Array(length = 384)
+    @Column(name = "embedding")
+    private float[] embedding;
 }
