@@ -43,6 +43,9 @@ CLAUDE.md
 PRODUCT.md
 .impeccable/
 
+# ─── Generated research/planning docs (local only, never shipped) ───
+research/
+
 # ─── VS Code ─────────────────────────────────────────────────────────────────
 .vscode/
 !.vscode/extensions.json
