@@ -35,6 +35,8 @@ app:
     base-url: https://test.groq.fake                                                     
   huggingface:                                              
     api-key: test-fake-key
+    model: BAAI/bge-small-en-v1.5
+    base-url: https://test.huggingface.fake
 
 logging:
   level:

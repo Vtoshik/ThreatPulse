@@ -40,8 +40,17 @@ app:
     nvd-key: YOUR_NVD_API_KEY_HERE          # optional, but increases rate limit
     news-api-key: YOUR_NEWS_API_KEY_HERE    # from newsapi.org
     groq-key: YOUR_GROQ_API_KEY_HERE        # from console.groq.com
-    huggingface-key: YOUR_HF_API_KEY_HERE   # from huggingface.co (Read token)
     resend-key: YOUR_RESEND_API_KEY_HERE    # from resend.com
+
+  huggingface:
+    api-key:  YOUR_HF_API_KEY_HERE           # from huggingface.co
+    model: BAAI/bge-small-en-v1.5
+    base-url: https://router.huggingface.co/hf-inference/models
+
+  groq:
+    api-key: YOUR_GROQ_API_KEY_HERE
+    model: openai/gpt-oss-120b
+    base-url: https://api.groq.com/openai/v1
 
   # ── JWT ──────────────────────────────────────────────────────────────────────
   jwt:
