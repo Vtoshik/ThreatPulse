@@ -3,6 +3,7 @@ package com.threatpulse.analyzer;
 import com.threatpulse.analyzer.dto.AnalyzedThreatEvent;
 import com.threatpulse.common.domain.Severity;
 import com.threatpulse.common.domain.Threat;
+import com.threatpulse.common.domain.ThreatCategory;
 import org.junit.jupiter.api.Test;
 
 import java.time.OffsetDateTime;
@@ -27,5 +28,47 @@ public class ThreatMapperTest {
         Threat threat = threatMapper.toThreat(badSeverityEvent);
 
         assertThat(threat.getSeverity()).isEqualTo(Severity.INFO);
+    }
+
+    @Test
+    public void toThreat_shouldFallBackToOther_whenCategoryIsInvalid() {
+        AnalyzedThreatEvent badCategoryEvent = new AnalyzedThreatEvent(
+                "ext-4", "title", "desc", "summary",
+                "HIGH", "UNKNOWN_CATEGORY", List.of(),
+                "action", "https://example.com", "NVD",
+                OffsetDateTime.now()
+        );
+
+        Threat threat = threatMapper.toThreat(badCategoryEvent);
+
+        assertThat(threat.getThreatCategory()).isEqualTo(ThreatCategory.OTHER);
+    }
+
+    @Test
+    public void embeddingText_shouldUseAiSummary_whenPresent() {
+        AnalyzedThreatEvent event = new AnalyzedThreatEvent(
+                "ext-5", "title", "description", "summary",
+                "HIGH", "OTHER", List.of(),
+                "action", "https://example.com", "NVD",
+                OffsetDateTime.now()
+        );
+
+        String text = ThreatMapper.embeddingText(event);
+
+        assertThat(text).isEqualTo("title\nsummary");
+    }
+
+    @Test
+    public void embeddingText_shouldFallBackToDescription_whenAiSummaryIsNull() {
+        AnalyzedThreatEvent event = new AnalyzedThreatEvent(
+                "ext-6", "title", "description", null,
+                "HIGH", "OTHER", List.of(),
+                "action", "https://example.com", "NVD",
+                OffsetDateTime.now()
+        );
+
+        String text = ThreatMapper.embeddingText(event);
+
+        assertThat(text).isEqualTo("title\ndescription");
     }
 }
