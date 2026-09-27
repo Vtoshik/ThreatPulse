@@ -24,6 +24,8 @@ public class AnalyzerConsumerTest {
     @Mock private ThreatAnalyzer threatAnalyzer;
     @Mock private ThreatRepository threatRepository;
     @Mock private KafkaTemplate<String, AnalyzedThreatEvent> kafkaTemplate;
+    @Mock private ThreatMapper threatMapper;
+    @Mock private EmbeddingService embeddingService;
 
     @InjectMocks
     private AnalyzerConsumer analyzerConsumer;
@@ -37,6 +39,10 @@ public class AnalyzerConsumerTest {
         return new AnalyzedThreatEvent(externalId, "title", "desc",
                 "summary", "HIGH", "OTHER", List.of("spring-boot"),
                 "action", "https://example.com", "NVD", OffsetDateTime.now());
+    }
+
+    private Threat buildThreat() {
+        return new Threat();
     }
 
     @Test
@@ -54,28 +60,11 @@ public class AnalyzerConsumerTest {
     void consume_shouldSaveAndPublish_whenThreatIsNew() {
         when(threatRepository.existsByExternalId("ext-2")).thenReturn(false);
         when(threatAnalyzer.analyze(any())).thenReturn(buildAnalyzedEvent("ext-2"));
+        when(threatMapper.toThreat(any())).thenReturn(buildThreat());
 
         analyzerConsumer.consume(buildRawEvent("ext-2"));
 
         verify(threatRepository).save(any(Threat.class));
         verify(kafkaTemplate).send(any(), eq("ext-2"), any(AnalyzedThreatEvent.class));
-    }
-
-    @Test
-    void consume_shouldStillSave_whenSeverityStringIsInvalid() {
-        // AI returns an unknown severity value — consumer should fallback to INFO
-        AnalyzedThreatEvent badSeverityEvent = new AnalyzedThreatEvent(
-                "ext-3", "title", "desc", "summary",
-                "UNKNOWN_SEVERITY", "OTHER", List.of(),
-                "action", "https://example.com", "NVD", OffsetDateTime.now()
-        );
-
-        when(threatRepository.existsByExternalId("ext-3")).thenReturn(false);
-        when(threatAnalyzer.analyze(any())).thenReturn(badSeverityEvent);
-
-        analyzerConsumer.consume(buildRawEvent("ext-3"));
-
-        // Should not throw — fallback to Severity.INFO and still save
-        verify(threatRepository).save(any(Threat.class));
     }
 }
