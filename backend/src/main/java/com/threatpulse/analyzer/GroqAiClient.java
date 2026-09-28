@@ -51,8 +51,13 @@ public class GroqAiClient {
                     .uri("/chat/completions")
                     .body(requestBody)
                     .retrieve()
-                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-                            (req, res) -> log.error("Groq API error: {} - {}", res.getStatusCode(), res.getBody()))
+                    .onStatus(status ->
+                        status.is4xxClientError()
+                        || status.is5xxServerError(),
+                            (req, res)
+                                -> log.error("Groq API error: {} - {}",
+                                    res.getStatusCode(),
+                                    res.getBody()))
                     .body(String.class);
 
             JsonNode root = objectMapper.readTree(response);

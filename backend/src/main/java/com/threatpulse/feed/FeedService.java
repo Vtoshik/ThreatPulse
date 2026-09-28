@@ -25,6 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FeedService {
     private final ThreatRepository threatRepository;
+    private final ThreatResponseMapper threatResponseMapper;
 
     /**
      * Retrieves a paginated list of threats ordered by collection time (descending).
@@ -56,7 +57,7 @@ public class FeedService {
         Page<Threat> threatPage = threatRepository.findAll(specification, pageable);
 
         List<ThreatResponse> threats = threatPage.getContent().stream()
-                .map(this::toResponse).toList();
+                .map(threatResponseMapper::toThreatResponse).toList();
 
         return new ThreatPageResponse(
                 threats,
@@ -77,28 +78,6 @@ public class FeedService {
     public ThreatResponse getThreatById(Long id) {
         Threat threat = threatRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Threat not found: " + id));
-        return toResponse(threat);
-    }
-
-    /**
-     * Maps a Threat entity to a ThreatResponse DTO.
-     *
-     * @param threat the entity to map
-     * @return DTO representation of the threat
-     */
-    private ThreatResponse toResponse(Threat threat) {
-        return new ThreatResponse(
-                threat.getId(),
-                threat.getExternalId(),
-                threat.getTitle(),
-                threat.getDescription(),
-                threat.getAiSummary(),
-                threat.getSeverity(),
-                threat.getThreatCategory(),
-                threat.getSourceName(),
-                threat.getSourceUrl(),
-                threat.getPublishedAt(),
-                threat.getAffectedTechnologies()
-        );
+        return threatResponseMapper.toThreatResponse(threat);
     }
 }
