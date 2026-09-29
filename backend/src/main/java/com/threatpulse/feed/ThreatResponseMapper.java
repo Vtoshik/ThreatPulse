@@ -4,6 +4,8 @@ import com.threatpulse.common.domain.Threat;
 import com.threatpulse.feed.dto.ThreatResponse;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
+
 @Component
 public class ThreatResponseMapper {
 
@@ -25,7 +27,7 @@ public class ThreatResponseMapper {
                 threat.getSourceName(),
                 threat.getSourceUrl(),
                 threat.getPublishedAt(),
-                threat.getAffectedTechnologies()
+                new HashSet<>(threat.getAffectedTechnologies())
         );
     }
 }
