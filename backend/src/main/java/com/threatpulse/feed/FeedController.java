@@ -1,5 +1,6 @@
 package com.threatpulse.feed;
 
+import com.threatpulse.feed.dto.SemanticSearchResponse;
 import com.threatpulse.feed.dto.ThreatPageResponse;
 import com.threatpulse.feed.dto.ThreatResponse;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class FeedController {
     private final FeedService feedService;
+    private final SearchService searchService;
 
     /**
      * Retrieves a paginated list of threats.
@@ -39,17 +41,15 @@ public class FeedController {
      * Searches threats by text query.
      *
      * @param q search text
-     * @param page page number
-     * @param size page size
+     * @param limit num of results
      * @return paginated threat response
      */
     @GetMapping("/search")
-    public ResponseEntity<ThreatPageResponse> searchThreats(
+    public ResponseEntity<SemanticSearchResponse> searchThreats(
             @RequestParam String q,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "10") int limit,
             @RequestParam(required = false) com.threatpulse.common.domain.Severity severity) {
-        return ResponseEntity.ok(feedService.getThreats(page, size, severity, q));
+        return ResponseEntity.ok(searchService.search(q, severity, limit));
     }
 
     /**

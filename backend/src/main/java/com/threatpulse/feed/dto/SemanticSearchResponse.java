@@ -1,4 +1,7 @@
 package com.threatpulse.feed.dto;
 
-public class SemanticSearchResponse {
-}
+import java.util.List;
+
+public record SemanticSearchResponse(
+        List<ThreatResponse> threats
+) {}

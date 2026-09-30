@@ -2,24 +2,40 @@ package com.threatpulse.feed;
 
 import com.threatpulse.analyzer.EmbeddingService;
 import com.threatpulse.common.domain.Severity;
+import com.threatpulse.common.domain.Threat;
+import com.threatpulse.feed.dto.SemanticSearchResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class SerchService {
+public class SearchService {
     private final EmbeddingService embeddingService;
     private final ThreatRepository threatRepository;
     private final ThreatResponseMapper threatResponseMapper;
     private final FeedService feedService;
 
+    private static final int MAX_LIMIT = 50;
+    private static final int MAX_QUERY_CHARS = 200;
+
+    @Transactional(readOnly = true)
     public SemanticSearchResponse search(String query, Severity severity, int limit) {
-        float[] queryVector = embeddingService.embedQuery(query);
+        int safeLimit = Math.max(1, Math.min(limit, MAX_LIMIT));
+        String safeQuery = query.substring(0, Math.min(query.length(), MAX_QUERY_CHARS));
+
+        float[] queryVector = embeddingService.embedQuery(safeQuery);
         if (queryVector == null) {
-            // fallback: what does calling the existing keyword path look like here,
-            // and how do you fit its Page-shaped result into a SemanticSearchResponse?
+            return new SemanticSearchResponse(feedService.getThreats(0, safeLimit,
+                    severity, safeQuery).threats());
         }
-        // turn queryVector into pgvector's text form — where did that formatting logic end up living?
-        // call findNearest, map each Threat, wrap in SemanticSearchResponse
+        String vectorText = Arrays.toString(queryVector);
+        List<Threat> nearest = threatRepository.findNearest(vectorText,
+                severity!= null ? severity.name() : null, safeLimit);
+        return new SemanticSearchResponse(nearest.stream()
+                .map(threatResponseMapper::toThreatResponse).toList());
     }
 }
