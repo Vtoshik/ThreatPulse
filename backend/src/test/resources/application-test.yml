@@ -16,6 +16,9 @@ spring:
     type: none
 
 app:
+  collector:
+    # Tests must not call the real NVD and RSS servers or add background traffic
+    enabled: false
   jwt:
     # Test secret — only used in tests, not a real secret
     secret: dGVzdFNlY3JldEtleVRoYXRJc0xvbmdFbm91Z2gxMjM=
