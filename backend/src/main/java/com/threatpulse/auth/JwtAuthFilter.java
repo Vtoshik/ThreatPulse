@@ -2,6 +2,7 @@ package com.threatpulse.auth;
 
 import java.io.IOException;
 
+import com.threatpulse.user.User;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -50,16 +51,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = header.substring(7);
 
         try {
-            String email = jwtService.extractUsername(token);
+            Long id = jwtService.extractUserId(token);
 
-            if (!email.isEmpty() && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (id != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 try {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                    User user = userDetailsService.loadUserById(id);
 
-                    if (jwtService.isTokenValid(token, userDetails)) {
+                    if (jwtService.isTokenValid(token, user)) {
                         UsernamePasswordAuthenticationToken authToken = new
-                                UsernamePasswordAuthenticationToken(userDetails, null,
-                                userDetails.getAuthorities());
+                                UsernamePasswordAuthenticationToken(user, null,
+                                user.getAuthorities());
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                     }

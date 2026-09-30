@@ -1,5 +1,7 @@
 package com.threatpulse.auth;
 
+import com.threatpulse.user.User;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,17 +16,19 @@ import com.threatpulse.user.UserRepository;
  * when validating credentials or generating JWT tokens.
  */
 @Service
+@RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
-
     private final UserRepository userRepository;
 
-    public UserDetailsServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String email)
+            throws UsernameNotFoundException {
         return userRepository.findByEmail(email)                                      
             .orElseThrow(() -> new UsernameNotFoundException("User not found: " +     
         email));
+    }
+
+    public User loadUserById(Long id) throws UsernameNotFoundException {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + id));
     }
 }

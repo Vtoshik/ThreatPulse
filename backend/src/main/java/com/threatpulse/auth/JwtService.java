@@ -1,11 +1,12 @@
 
 package com.threatpulse.auth;
 
+import com.threatpulse.user.User;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -35,16 +36,26 @@ public class JwtService {
     }
 
     // Generate a JWT token with subject, issued date, expiration, and signature
-    public String generateToken(UserDetails user) {
-        return Jwts.builder().subject(user.getUsername()).issuedAt(new Date())
+    public String generateToken(User user) {
+        return Jwts.builder().subject(String.valueOf(user.getId())).issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiryHours * 60 * 60 *1000))
                 .signWith(getSigningKey()).compact();
     }
 
-    // Extract username (subject) from the JWT token
-    String extractUsername(String token) {
-        return Jwts.parser().verifyWith(getSigningKey()).build()
-                .parseSignedClaims(token).getPayload().getSubject();
+    // Extract id (subject) from the JWT token
+    Long extractUserId(String token) {
+        String id = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
+
+        try {
+            return Long.valueOf(id);
+        } catch (NumberFormatException e) {
+            throw new JwtException("Failed to parse String id to Long", e);
+        }
     }
 
     // Extract the expiration date from the JWT token
@@ -54,8 +65,8 @@ public class JwtService {
     }
 
     // Validate the token by checking username match and expiration
-    boolean isTokenValid(String token, UserDetails user) {
-        final String username = extractUsername(token);
-        return username.equals(user.getUsername()) && extractTokenExpiration(token).after(new Date());
+    boolean isTokenValid(String token, User user) {
+        final Long id = extractUserId(token);
+        return id.equals(user.getId()) && extractTokenExpiration(token).after(new Date());
     }
 }

@@ -1,6 +1,5 @@
 package com.threatpulse.auth;
 
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -52,15 +51,13 @@ public class AuthService {
         userRepository.save(user);
 
         // loadUserByUsername uses email as identifier in this project
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        return new AuthResponse(jwtService.generateToken(userDetails), "Bearer");
+        return new AuthResponse(jwtService.generateToken(user), "Bearer");
     }
 
     public AuthResponse loginDemo() {
         User demoUser = userRepository.findByEmail("demo@threatpulse.app")
                 .orElseThrow(() -> new ThreatPulseException("Demo user not available", 503));
-        UserDetails userDetails = userDetailsService.loadUserByUsername(demoUser.getEmail());
-        return new AuthResponse(jwtService.generateToken(userDetails), "Bearer");
+        return new AuthResponse(jwtService.generateToken(demoUser), "Bearer");
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -72,8 +69,6 @@ public class AuthService {
             throw new ThreatPulseException("Invalid credentials", 401);
         }
 
-        // loadUserByUsername uses email as identifier in this project
-        UserDetails userDetails = userDetailsService.loadUserByUsername(foundUser.getEmail());
-        return new AuthResponse(jwtService.generateToken(userDetails), "Bearer");
+        return new AuthResponse(jwtService.generateToken(foundUser), "Bearer");
     }
 }
