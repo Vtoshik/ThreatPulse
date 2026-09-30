@@ -1,6 +1,7 @@
 import { Client } from '@stomp/stompjs';
 import { ref } from 'vue';
-import type { Threat } from 'src/types/threat';
+import type { ApiThreat, Threat } from 'src/types/threat';
+import { mapThreat } from 'src/services/threats.service';
 import { useAuthStore } from 'src/stores/auth';
 import { useQuasar } from 'quasar';
 
@@ -18,8 +19,8 @@ export function useWebSocket() {
     client.onConnect = () => {
       connected.value = true;
       client.subscribe('/topic/threats', (message) => {
-        const threat = JSON.parse(message.body) as Threat;
-        threats.value.unshift(threat);
+        const apiThreat = JSON.parse(message.body) as ApiThreat;
+        threats.value.unshift(mapThreat(apiThreat));
       });
       client.subscribe(`/topic/alerts/${authStore.user?.id}`, (message) => {
         const alert = JSON.parse(message.body)
