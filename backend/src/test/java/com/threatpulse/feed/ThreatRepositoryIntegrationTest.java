@@ -41,13 +41,17 @@ public class ThreatRepositoryIntegrationTest extends BaseIntegrationTest {
     }
 
     private Threat saveThreat(String externalId, float[] embedding) {
+        return saveThreat(externalId, embedding, Severity.HIGH);
+    }
+
+    private Threat saveThreat(String externalId, float[] embedding, Severity severity) {
         Threat threat = new Threat();
         threat.setExternalId(externalId);
         threat.setTitle("Title " + externalId);
         threat.setDescription("Description " + externalId);
         threat.setSourceUrl("https://example.com/" + externalId);
         threat.setSourceName("TEST");
-        threat.setSeverity(Severity.HIGH);
+        threat.setSeverity(severity);
         threat.setThreatCategory(ThreatCategory.OTHER);
         threat.setPublishedAt(OffsetDateTime.now());
         threat.setCollectedAt(OffsetDateTime.now());
@@ -67,7 +71,7 @@ public class ThreatRepositoryIntegrationTest extends BaseIntegrationTest {
 
         String query = Arrays.toString(vector(1f));
 
-        List<Threat> result = threatRepository.findNearest(query, 10);
+        List<Threat> result = threatRepository.findNearest(query, null, 10);
 
         assertThat(externalIds(result)).containsExactly("identical", "similar", "orthogonal");
     }
@@ -77,7 +81,7 @@ public class ThreatRepositoryIntegrationTest extends BaseIntegrationTest {
         saveThreat("embedded", vector(1f));
         saveThreat("no-embedding", null);
 
-        List<Threat> result = threatRepository.findNearest(Arrays.toString(vector(1f)), 10);
+        List<Threat> result = threatRepository.findNearest(Arrays.toString(vector(1f)), null, 10);
 
         // Without the IS NOT NULL filter the null-embedding row would fill the remaining slots
         assertThat(externalIds(result)).containsExactly("embedded");
@@ -89,7 +93,7 @@ public class ThreatRepositoryIntegrationTest extends BaseIntegrationTest {
         saveThreat("b", vector(0.9f, 0.1f));
         saveThreat("c", vector(0f, 1f));
 
-        List<Threat> result = threatRepository.findNearest(Arrays.toString(vector(1f)), 2);
+        List<Threat> result = threatRepository.findNearest(Arrays.toString(vector(1f)), null, 2);
 
         assertThat(externalIds(result)).containsExactly("a", "b");
     }
@@ -98,8 +102,30 @@ public class ThreatRepositoryIntegrationTest extends BaseIntegrationTest {
     void findNearest_shouldReturnEmptyList_whenNoThreatHasEmbedding() {
         saveThreat("no-embedding", null);
 
-        List<Threat> result = threatRepository.findNearest(Arrays.toString(vector(1f)), 10);
+        List<Threat> result = threatRepository.findNearest(Arrays.toString(vector(1f)), null, 10);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findNearest_shouldFilterBySeverity_whenSeverityIsGiven() {
+        saveThreat("high", vector(1f), Severity.HIGH);
+        saveThreat("critical", vector(0.9f, 0.1f), Severity.CRITICAL);
+
+        List<Threat> result = threatRepository.findNearest(
+                Arrays.toString(vector(1f)), Severity.CRITICAL.name(), 10);
+
+        assertThat(externalIds(result)).containsExactly("critical");
+    }
+
+    @Test
+    void findNearest_shouldIgnoreSeverityFilter_whenSeverityIsNull() {
+        saveThreat("high", vector(1f), Severity.HIGH);
+        saveThreat("critical", vector(0.9f, 0.1f), Severity.CRITICAL);
+
+        List<Threat> result = threatRepository.findNearest(
+                Arrays.toString(vector(1f)), null, 10);
+
+        assertThat(externalIds(result)).containsExactly("high", "critical");
     }
 }

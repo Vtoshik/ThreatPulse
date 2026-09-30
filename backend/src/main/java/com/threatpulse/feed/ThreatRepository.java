@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.lang.Nullable;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -36,10 +37,12 @@ public interface ThreatRepository extends JpaRepository<Threat, Long>,
 
     @Query(value = """
                 SELECT * FROM threats
-                WHERE embedding IS NOT NULL 
+                WHERE embedding IS NOT NULL
+                    AND (:severity IS NULL OR severity = CAST(:severity AS severity_level_enum))
                 ORDER BY embedding <=> CAST(:queryVector AS vector)
                 LIMIT :limit
                 """, nativeQuery = true)
     List<Threat> findNearest(@Param("queryVector") String queryVector,
+                             @Nullable @Param("severity") String severity,
                              @Param("limit") int limit);
 }
