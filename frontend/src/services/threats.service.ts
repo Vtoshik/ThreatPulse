@@ -1,5 +1,11 @@
 import axiosInstanse from './api'
-import type { ApiThreat, ApiThreatPage, Severity, Threat } from 'src/types/threat'
+import type {
+  ApiSemanticSearchResponse,
+  ApiThreat,
+  ApiThreatPage,
+  Severity,
+  Threat,
+} from 'src/types/threat'
 
 const SEVERITY_SCORE: Record<Severity, number> = {
   CRITICAL: 9.8,
@@ -165,16 +171,15 @@ export const threatService = {
     return mapThreat(response.data)
   },
 
-  async searchThreats(query: string, params?: { page?: number; size?: number; severity?: string }) {
-    const response = await axiosInstanse.get<ApiThreatPage>('/api/threats/search', {
+  async searchThreats(query: string, params?: { limit?: number; severity?: string }) {
+    const response = await axiosInstanse.get<ApiSemanticSearchResponse>('/api/threats/search', {
       params: {
         q: query,
-        page: params?.page ?? 0,
-        size: params?.size ?? 20,
+        limit: params?.limit ?? 20,
         severity: params?.severity && params.severity !== 'ALL' ? params.severity : undefined,
       },
     })
 
-    return mapPage(response.data)
+    return { threats: response.data.threats.map(mapThreat) }
   },
 }

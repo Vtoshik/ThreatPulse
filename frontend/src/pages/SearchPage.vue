@@ -122,8 +122,7 @@ async function doSearch() {
 
   try {
     const data = await threatService.searchThreats(query.value, {
-      page: 0,
-      size: 20,
+      limit: 20,
     })
 
     results.value = data.threats
