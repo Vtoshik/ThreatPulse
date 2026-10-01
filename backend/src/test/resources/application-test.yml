@@ -35,6 +35,8 @@ app:
   groq:
     api-key: test-fake-key                                                    
     model: openai/gpt-oss-120b
+    # No throttle in tests: nothing real is called and tests should not wait
+    requests-per-minute: 0
     base-url: https://test.groq.fake                                                     
   huggingface:                                              
     api-key: test-fake-key

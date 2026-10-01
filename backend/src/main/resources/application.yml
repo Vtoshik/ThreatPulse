@@ -36,8 +36,12 @@ spring:
       # Spring automatically deserializes JSON messages into Java objects
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      # Every analyzed record can wait several seconds for the Groq rate limit, so take few
+      # records per poll and allow enough time to process them before Kafka drops the consumer
+      max-poll-records: 5
       properties:
         spring.json.trusted.packages: "com.threatpulse.*"
+        max.poll.interval.ms: 900000
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -47,6 +51,14 @@ app:
     enabled: true
   pipeline:
     kafka-enabled: true
+  groq:
+    # The free tier limits both requests and tokens per minute. Stay below the limit
+    # instead of sending a burst and getting HTTP 429 back. Zero switches the throttle off.
+    requests-per-minute: 12
+    # Retries after HTTP 429 or a 5xx error, waiting for the Retry-After time Groq sends
+    max-retries: 3
+    # If Groq asks for a longer wait (for example the daily limit is used up), give up
+    max-retry-wait-seconds: 60
 
 # ── Spring Boot Actuator (health checks, metrics) ────────────────────────────
 # /actuator/health is used by Railway and Docker to check if the app is alive
