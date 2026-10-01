@@ -45,6 +45,21 @@ public class ThreatMapperTest {
     }
 
     @Test
+    public void toThreat_shouldKeepSupplyChainCategory_whenAiReturnsIt() {
+        // The AI prompt offers SUPPLY_CHAIN, so it must not be treated as an unknown value
+        AnalyzedThreatEvent event = new AnalyzedThreatEvent(
+                "ext-7", "title", "desc", "summary",
+                "HIGH", "SUPPLY_CHAIN", List.of(),
+                "action", "https://example.com", "NVD",
+                OffsetDateTime.now()
+        );
+
+        Threat threat = threatMapper.toThreat(event);
+
+        assertThat(threat.getThreatCategory()).isEqualTo(ThreatCategory.SUPPLY_CHAIN);
+    }
+
+    @Test
     public void embeddingText_shouldUseAiSummary_whenPresent() {
         AnalyzedThreatEvent event = new AnalyzedThreatEvent(
                 "ext-5", "title", "description", "summary",

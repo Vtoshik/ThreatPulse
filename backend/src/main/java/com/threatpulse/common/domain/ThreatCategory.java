@@ -10,5 +10,6 @@ public enum ThreatCategory {
     XSS,         // Cross-Site Scripting
     SQLI,        // SQL Injection
     DATA_BREACH, // Data exposure or leak
+    SUPPLY_CHAIN, // Compromised or malicious dependency, package or build tool
     OTHER        // Uncategorized threats
 }

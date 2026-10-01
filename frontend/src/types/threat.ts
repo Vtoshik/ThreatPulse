@@ -1,5 +1,5 @@
 export type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO'
-export type ThreatCategory = 'RCE' | 'XSS' | 'SQLi' | 'DATA_BREACH' | 'OTHER'
+export type ThreatCategory = 'RCE' | 'XSS' | 'SQLI' | 'DATA_BREACH' | 'SUPPLY_CHAIN' | 'OTHER'
 
 export interface ThreatTimeline {
   t: string
