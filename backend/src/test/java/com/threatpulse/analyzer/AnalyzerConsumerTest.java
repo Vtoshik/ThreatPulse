@@ -2,30 +2,26 @@ package com.threatpulse.analyzer;
 
 import com.threatpulse.analyzer.dto.AnalyzedThreatEvent;
 import com.threatpulse.collector.dto.RawThreatEvent;
-import com.threatpulse.common.domain.Threat;
-import com.threatpulse.feed.ThreatRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.kafka.core.KafkaTemplate;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class AnalyzerConsumerTest {
 
-    @Mock private ThreatAnalyzer threatAnalyzer;
-    @Mock private ThreatRepository threatRepository;
-    @Mock private KafkaTemplate<String, AnalyzedThreatEvent> kafkaTemplate;
-    @Mock private ThreatMapper threatMapper;
-    @Mock private EmbeddingService embeddingService;
+    @Mock private ThreatIngestionService threatIngestionService;
+    @Mock private AnalyzedThreatPublisher analyzedThreatPublisher;
 
     @InjectMocks
     private AnalyzerConsumer analyzerConsumer;
@@ -41,30 +37,25 @@ public class AnalyzerConsumerTest {
                 "action", "https://example.com", "NVD", OffsetDateTime.now());
     }
 
-    private Threat buildThreat() {
-        return new Threat();
+    @Test
+    void consume_shouldPublishTheAnalyzedThreat_whenIngestionReturnsIt() {
+        RawThreatEvent raw = buildRawEvent("ext-1");
+        AnalyzedThreatEvent analyzed = buildAnalyzedEvent("ext-1");
+        when(threatIngestionService.ingest(raw)).thenReturn(Optional.of(analyzed));
+
+        analyzerConsumer.consume(raw);
+
+        verify(analyzedThreatPublisher).publish(analyzed);
     }
 
     @Test
-    void consume_shouldSkipSaving_whenThreatAlreadyExists() {
-        when(threatRepository.existsByExternalId("ext-1")).thenReturn(true);
+    void consume_shouldNotPublishAnything_whenIngestionReturnsNothing() {
+        // The threat already existed, or its analysis failed and it was saved as pending
+        RawThreatEvent raw = buildRawEvent("ext-2");
+        when(threatIngestionService.ingest(raw)).thenReturn(Optional.empty());
 
-        analyzerConsumer.consume(buildRawEvent("ext-1"));
+        analyzerConsumer.consume(raw);
 
-        // existsByExternalId returned true — save and kafka publish must not happen
-        verify(threatRepository, never()).save(any());
-        verify(kafkaTemplate, never()).send(any(), any(), any());
-    }
-
-    @Test
-    void consume_shouldSaveAndPublish_whenThreatIsNew() {
-        when(threatRepository.existsByExternalId("ext-2")).thenReturn(false);
-        when(threatAnalyzer.analyze(any())).thenReturn(buildAnalyzedEvent("ext-2"));
-        when(threatMapper.toThreat(any())).thenReturn(buildThreat());
-
-        analyzerConsumer.consume(buildRawEvent("ext-2"));
-
-        verify(threatRepository).save(any(Threat.class));
-        verify(kafkaTemplate).send(any(), eq("ext-2"), any(AnalyzedThreatEvent.class));
+        verify(analyzedThreatPublisher, never()).publish(any());
     }
 }
