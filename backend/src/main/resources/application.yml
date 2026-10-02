@@ -10,6 +10,12 @@ spring:
     name: threatpulse
   cache:
     type: redis
+  task:
+    scheduling:
+      pool:
+        # The default is one thread, so a long collector or re-analysis run
+        # would delay the alert checks until it finishes
+        size: 3
 
   # ── JPA / Hibernate ──────────────────────────────────────────────────────────
   jpa:
@@ -59,6 +65,12 @@ app:
     max-retries: 3
     # If Groq asks for a longer wait (for example the daily limit is used up), give up
     max-retry-wait-seconds: 60
+  reanalysis:
+    # Repeats failed AI analyses and creates missing embeddings, a batch at a time
+    enabled: true
+    interval-ms: 300000
+    initial-delay-ms: 60000
+    batch-size: 20
 
 # ── Spring Boot Actuator (health checks, metrics) ────────────────────────────
 # /actuator/health is used by Railway and Docker to check if the app is alive
