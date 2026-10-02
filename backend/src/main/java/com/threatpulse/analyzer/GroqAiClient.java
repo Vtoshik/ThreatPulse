@@ -29,6 +29,10 @@ public class GroqAiClient {
     private static final long BASE_BACKOFF_MILLIS = 2000;
     // Rate limit and temporary server problems are worth another try, other errors are not
     private static final Set<Integer> RETRYABLE_STATUSES = Set.of(429, 500, 502, 503, 504);
+    // A request that is bigger than the tokens-per-minute limit is rejected every time, so the
+    // text is cut. About 4000 characters is roughly 1000 tokens, enough to understand a threat.
+    private static final int MAX_TITLE_CHARS = 500;
+    private static final int MAX_DESCRIPTION_CHARS = 4000;
 
     private final RestClient restClient;
     private final String model;
@@ -75,7 +79,8 @@ public class GroqAiClient {
      * @return the analysis, or null if it could not be obtained
      */
     public ThreatAnalysis analyze(String title, String description) {
-        Map<String, Object> requestBody = buildRequestBody(buildPrompt(title, description));
+        Map<String, Object> requestBody = buildRequestBody(buildPrompt(
+                limit(title, MAX_TITLE_CHARS), limit(description, MAX_DESCRIPTION_CHARS)));
 
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
             throttle.acquire();
@@ -120,6 +125,13 @@ public class GroqAiClient {
         }
 
         return null;
+    }
+
+    private static String limit(String text, int maxChars) {
+        if (text == null) {
+            return "";
+        }
+        return text.length() <= maxChars ? text : text.substring(0, maxChars);
     }
 
     private Map<String, Object> buildRequestBody(String prompt) {

@@ -104,6 +104,31 @@ public class GroqAiClientTest {
     }
 
     @Test
+    void analyze_shouldCutAVeryLongDescription_soTheRequestIsNotRejectedForItsSize() throws Exception {
+        // Without a limit a huge RSS article would be rejected by Groq on every attempt
+        server.expect(requestTo(ENDPOINT))
+                .andExpect(request -> {
+                    String body = ((org.springframework.mock.http.client.MockClientHttpRequest) request)
+                            .getBodyAsString();
+                    assertThat(body).contains("x".repeat(4000));
+                    assertThat(body).doesNotContain("x".repeat(4001));
+                })
+                .andRespond(withSuccess(successBody(), MediaType.APPLICATION_JSON));
+
+        ThreatAnalysis result = client.analyze("title", "x".repeat(100_000));
+
+        assertThat(result).isNotNull();
+        server.verify();
+    }
+
+    @Test
+    void analyze_shouldWorkWithoutADescription() throws Exception {
+        expectSuccess();
+
+        assertThat(client.analyze("title", null)).isNotNull();
+    }
+
+    @Test
     void analyze_shouldStripMarkdownFences_aroundTheJson() throws Exception {
         server.expect(requestTo(ENDPOINT))
                 .andRespond(withSuccess(completion("```json\n" + ANALYSIS_JSON + "\n```"),
