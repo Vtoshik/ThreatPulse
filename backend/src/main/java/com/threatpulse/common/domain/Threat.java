@@ -83,6 +83,15 @@ public class Threat {
     @Column(name = "analyzed_at")
     private OffsetDateTime analyzedAt;
 
+    // Whether the AI analysis finished. A pending threat is hidden from users and alerts.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "analysis_status", nullable = false)
+    private AnalysisStatus analysisStatus = AnalysisStatus.ANALYZED;
+
+    // When the last analysis attempt started, so the least recently tried threats go first
+    @Column(name = "analysis_attempted_at")
+    private OffsetDateTime analysisAttemptedAt;
+
     // List of affected technologies (stored in a separate collection table)
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(

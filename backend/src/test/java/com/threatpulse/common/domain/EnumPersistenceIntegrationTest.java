@@ -58,4 +58,41 @@ public class EnumPersistenceIntegrationTest extends BaseIntegrationTest {
             assertThat(loaded.getSeverity()).as("severity %s", severity).isEqualTo(severity);
         }
     }
+
+    @Test
+    void everyAnalysisStatus_shouldBeStoredAndReadBack() {
+        for (AnalysisStatus status : AnalysisStatus.values()) {
+            Threat threat = newThreat(Severity.HIGH, ThreatCategory.OTHER);
+            threat.setAnalysisStatus(status);
+            Threat saved = threatRepository.saveAndFlush(threat);
+
+            Threat loaded = threatRepository.findById(saved.getId()).orElseThrow();
+
+            assertThat(loaded.getAnalysisStatus()).as("status %s", status).isEqualTo(status);
+        }
+    }
+
+    @Test
+    void newThreat_shouldDefaultToAnalyzed() {
+        Threat saved = threatRepository.saveAndFlush(newThreat(Severity.HIGH, ThreatCategory.OTHER));
+
+        assertThat(threatRepository.findById(saved.getId()).orElseThrow().getAnalysisStatus())
+                .isEqualTo(AnalysisStatus.ANALYZED);
+    }
+
+    @Test
+    void pendingThreat_shouldBeStoredWithoutSeverityCategoryAndAnalysisTime() {
+        // A threat waiting for analysis has unknown values, which must be NULL and not made up
+        Threat threat = newThreat(null, null);
+        threat.setAnalysisStatus(AnalysisStatus.PENDING_ANALYSIS);
+        threat.setAnalysisAttemptedAt(OffsetDateTime.now());
+        Threat saved = threatRepository.saveAndFlush(threat);
+
+        Threat loaded = threatRepository.findById(saved.getId()).orElseThrow();
+
+        assertThat(loaded.getSeverity()).isNull();
+        assertThat(loaded.getThreatCategory()).isNull();
+        assertThat(loaded.getAnalyzedAt()).isNull();
+        assertThat(loaded.getAnalysisAttemptedAt()).isNotNull();
+    }
 }
