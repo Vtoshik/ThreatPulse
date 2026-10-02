@@ -1,5 +1,6 @@
 package com.threatpulse.feed;
 
+import com.threatpulse.common.domain.AnalysisStatus;
 import com.threatpulse.common.domain.Severity;
 import com.threatpulse.common.domain.Threat;
 import jakarta.persistence.criteria.JoinType;
@@ -13,6 +14,11 @@ import java.util.Locale;
  */
 final class ThreatSpecifications {
     private ThreatSpecifications() {
+    }
+
+    /** Threats waiting for their AI analysis have unknown values and must not be shown. */
+    static Specification<Threat> isAnalyzed() {
+        return (root, query, cb) -> cb.equal(root.get("analysisStatus"), AnalysisStatus.ANALYZED);
     }
 
     static Specification<Threat> withSeverity(Severity severity) {

@@ -1,5 +1,6 @@
 package com.threatpulse.feed;
 
+import com.threatpulse.common.domain.AnalysisStatus;
 import com.threatpulse.common.domain.Severity;
 import com.threatpulse.common.domain.Threat;
 import org.springframework.data.domain.Page;
@@ -33,11 +34,36 @@ public interface ThreatRepository extends JpaRepository<Threat, Long>,
                                                       Pageable pageable);
     boolean existsByExternalId(String externalId);
     Optional<Threat> findByExternalId(String externalId);
-    List<Threat> findByAnalyzedAtAfter(OffsetDateTime after);
+    // Only threats whose analysis finished can raise alerts
+    List<Threat> findByAnalysisStatusAndAnalyzedAtAfter(AnalysisStatus status,
+                                                        OffsetDateTime after);
+    boolean existsByIdAndAnalysisStatus(Long id, AnalysisStatus status);
+
+    /**
+     * Threats waiting for their analysis, the ones tried least recently first (never tried
+     * comes before everything else). A threat that keeps failing moves to the back of the
+     * queue after each attempt, so it cannot block the others.
+     */
+    @Query("""
+            SELECT t FROM Threat t
+            WHERE t.analysisStatus = com.threatpulse.common.domain.AnalysisStatus.PENDING_ANALYSIS
+            ORDER BY t.analysisAttemptedAt ASC NULLS FIRST, t.collectedAt ASC
+            """)
+    List<Threat> findPendingForAnalysis(Pageable pageable);
+
+    /** Analyzed threats that have no embedding yet, newest first so recent news is searchable first. */
+    @Query("""
+            SELECT t FROM Threat t
+            WHERE t.analysisStatus = com.threatpulse.common.domain.AnalysisStatus.ANALYZED
+              AND t.embedding IS NULL
+            ORDER BY t.collectedAt DESC
+            """)
+    List<Threat> findAnalyzedWithoutEmbedding(Pageable pageable);
 
     @Query(value = """
                 SELECT * FROM threats
                 WHERE embedding IS NOT NULL
+                    AND analysis_status = 'ANALYZED'
                     AND (:severity IS NULL OR severity = CAST(:severity AS severity_level_enum))
                 ORDER BY embedding <=> CAST(:queryVector AS vector)
                 LIMIT :limit

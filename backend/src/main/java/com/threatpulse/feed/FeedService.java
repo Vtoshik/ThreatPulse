@@ -1,5 +1,6 @@
 package com.threatpulse.feed;
 
+import com.threatpulse.common.domain.AnalysisStatus;
 import com.threatpulse.common.domain.Threat;
 import com.threatpulse.common.exception.ResourceNotFoundException;
 import com.threatpulse.feed.dto.ThreatPageResponse;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -51,7 +53,8 @@ public class FeedService {
     public ThreatPageResponse getThreats(int page, int size, com.threatpulse.common.domain.Severity severity, String query) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"));
         Specification<Threat> specification = Specification
-                .where(ThreatSpecifications.withSeverity(severity))
+                .where(ThreatSpecifications.isAnalyzed())
+                .and(ThreatSpecifications.withSeverity(severity))
                 .and(ThreatSpecifications.matchesQuery(query));
 
         Page<Threat> threatPage = threatRepository.findAll(specification, pageable);
@@ -75,8 +78,11 @@ public class FeedService {
      * @return mapped ThreatResponse
      * @throws ResourceNotFoundException if the threat does not exist
      */
+    @Transactional(readOnly = true)
     public ThreatResponse getThreatById(Long id) {
+        // A threat that is still waiting for its analysis is treated as not existing
         Threat threat = threatRepository.findById(id)
+                .filter(found -> found.getAnalysisStatus() == AnalysisStatus.ANALYZED)
                 .orElseThrow(() -> new ResourceNotFoundException("Threat not found: " + id));
         return threatResponseMapper.toThreatResponse(threat);
     }

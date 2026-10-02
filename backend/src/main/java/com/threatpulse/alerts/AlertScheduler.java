@@ -1,5 +1,6 @@
 package com.threatpulse.alerts;
 
+import com.threatpulse.common.domain.AnalysisStatus;
 import com.threatpulse.common.domain.Threat;
 import com.threatpulse.feed.ThreatRepository;
 import java.time.OffsetDateTime;
@@ -25,7 +26,8 @@ public class AlertScheduler {
     @Scheduled(initialDelay = 60_000, fixedDelay = 10 * 60 * 1000)
     public void checkRecentThreats() {
         OffsetDateTime since = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
-        List<Threat> recent = threatRepository.findByAnalyzedAtAfter(since);
+        List<Threat> recent = threatRepository.findByAnalysisStatusAndAnalyzedAtAfter(
+                AnalysisStatus.ANALYZED, since);
         if (recent.isEmpty()) return;
         log.info("AlertScheduler: checking {} recent threats against alert rules", recent.size());
         for (Threat threat : recent) {
