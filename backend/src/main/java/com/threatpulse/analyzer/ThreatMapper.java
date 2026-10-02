@@ -1,6 +1,8 @@
 package com.threatpulse.analyzer;
 
 import com.threatpulse.analyzer.dto.AnalyzedThreatEvent;
+import com.threatpulse.collector.dto.RawThreatEvent;
+import com.threatpulse.common.domain.AnalysisStatus;
 import com.threatpulse.common.domain.Severity;
 import com.threatpulse.common.domain.Threat;
 import com.threatpulse.common.domain.ThreatCategory;
@@ -14,47 +16,100 @@ import java.util.HashSet;
 @Component
 public class ThreatMapper {
 
+    /**
+     * Builds a new, fully analyzed threat.
+     */
     public Threat toThreat(AnalyzedThreatEvent analyzed) {
         Threat threat = new Threat();
 
-        threat.setAffectedTechnologies(new HashSet<>(analyzed.affectedTechnologies()));
         threat.setTitle(analyzed.title());
         threat.setDescription(analyzed.description());
         threat.setSourceName(analyzed.sourceName());
         threat.setSourceUrl(analyzed.sourceUrl());
-        threat.setAiSummary(analyzed.aiSummary());
         threat.setExternalId(analyzed.externalId());
-        OffsetDateTime now = OffsetDateTime.now();
-        threat.setCollectedAt(now);
-        threat.setAnalyzedAt(now);
         threat.setPublishedAt(analyzed.publishedAt());
 
-        Severity severity;
-        try {
-            severity = Severity.valueOf(analyzed.severity());
-        } catch (Exception e) {
-            log.error("Failed to cast severity: {}", analyzed.severity(), e);
-            severity = Severity.INFO;
-        }
-
-        ThreatCategory category;
-        try {
-            category = ThreatCategory.valueOf(analyzed.category());
-        } catch (Exception e) {
-            log.error("Failed to cast category: {}", analyzed.category(), e);
-            category = ThreatCategory.OTHER;
-        }
-
-        threat.setThreatCategory(category);
-        threat.setSeverity(severity);
+        // One time for collected and analyzed, so both fields are consistent
+        OffsetDateTime now = OffsetDateTime.now();
+        threat.setCollectedAt(now);
+        fillAnalysis(threat, analyzed, now);
 
         return threat;
     }
 
-    public static String embeddingText(AnalyzedThreatEvent analyzed) {
-        String summaryOrDescription = analyzed.aiSummary() != null
-                ? analyzed.aiSummary()
-                : analyzed.description();
-        return analyzed.title() + "\n" + summaryOrDescription;
+    /**
+     * Builds a threat whose AI analysis failed. The source data is real and is kept, the analysis
+     * fields stay empty (NULL), never made up, and the threat is hidden until it is analyzed.
+     */
+    public Threat toPendingThreat(RawThreatEvent raw) {
+        Threat threat = new Threat();
+
+        threat.setTitle(raw.title());
+        threat.setDescription(raw.description());
+        threat.setSourceName(raw.sourceName());
+        threat.setSourceUrl(raw.sourceUrl());
+        threat.setExternalId(raw.externalId());
+        threat.setPublishedAt(raw.publishedAt());
+
+        OffsetDateTime now = OffsetDateTime.now();
+        threat.setCollectedAt(now);
+        threat.setAnalysisAttemptedAt(now);
+        threat.setAnalysisStatus(AnalysisStatus.PENDING_ANALYSIS);
+
+        return threat;
     }
- }
+
+    /**
+     * Writes a finished analysis into a stored threat and marks it as analyzed.
+     */
+    public void applyAnalysis(Threat threat, AnalyzedThreatEvent analyzed) {
+        fillAnalysis(threat, analyzed, OffsetDateTime.now());
+    }
+
+    private void fillAnalysis(Threat threat, AnalyzedThreatEvent analyzed, OffsetDateTime now) {
+        threat.setAiSummary(analyzed.aiSummary());
+        threat.setAffectedTechnologies(analyzed.affectedTechnologies() == null
+                ? new HashSet<>()
+                : new HashSet<>(analyzed.affectedTechnologies()));
+        threat.setSeverity(parseSeverity(analyzed.severity()));
+        threat.setThreatCategory(parseCategory(analyzed.category()));
+        threat.setAnalyzedAt(now);
+        threat.setAnalysisAttemptedAt(now);
+        threat.setAnalysisStatus(AnalysisStatus.ANALYZED);
+    }
+
+    private Severity parseSeverity(String value) {
+        try {
+            return Severity.valueOf(value);
+        } catch (Exception e) {
+            log.error("Failed to cast severity: {}", value, e);
+            return Severity.INFO;
+        }
+    }
+
+    private ThreatCategory parseCategory(String value) {
+        try {
+            return ThreatCategory.valueOf(value);
+        } catch (Exception e) {
+            log.error("Failed to cast category: {}", value, e);
+            return ThreatCategory.OTHER;
+        }
+    }
+
+    /**
+     * The text that is turned into an embedding: title plus the summary, or the description
+     * when there is no summary.
+     */
+    public static String embeddingText(AnalyzedThreatEvent analyzed) {
+        return embeddingText(analyzed.title(), analyzed.aiSummary(), analyzed.description());
+    }
+
+    public static String embeddingText(Threat threat) {
+        return embeddingText(threat.getTitle(), threat.getAiSummary(), threat.getDescription());
+    }
+
+    private static String embeddingText(String title, String summary, String description) {
+        String body = summary != null && !summary.isBlank() ? summary : description;
+        return title + "\n" + body;
+    }
+}
