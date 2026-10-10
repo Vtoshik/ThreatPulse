@@ -16,6 +16,10 @@ spring:
     type: none
 
 app:
+  auth:
+    registration-enabled: true
+    demo-enabled: true
+    credentials-change-enabled: true
   collector:
     # Tests must not call the real NVD and RSS servers or add background traffic
     enabled: false

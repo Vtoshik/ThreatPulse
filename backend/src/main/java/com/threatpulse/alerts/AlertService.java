@@ -6,14 +6,17 @@ import com.threatpulse.alerts.dto.AlertRuleResponse;
 import com.threatpulse.analyzer.dto.AnalyzedThreatEvent;
 import com.threatpulse.common.config.KafkaConfig;
 import com.threatpulse.common.domain.Severity;
+import com.threatpulse.common.domain.TechnologyNames;
 import com.threatpulse.common.domain.Threat;
 import com.threatpulse.feed.ThreatRepository;
 import com.threatpulse.user.User;
-import java.util.Arrays;
+import com.threatpulse.user.UserPreferences;
+import com.threatpulse.user.UserPreferencesRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.lang.Nullable;
@@ -26,14 +29,25 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AlertService {
 
+    private static final String IN_APP_CHANNEL = "IN_APP";
+
     private final AlertRuleRepository alertRuleRepository;
-    private final EmailNotifier emailNotifier;
     private final AlertHistoryRepository alertHistoryRepository;
     private final ThreatRepository threatRepository;
+    private final UserPreferencesRepository userPreferencesRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
+    // Optional outgoing channels. The list stays empty when no channel is enabled.
+    private List<Notifier> notifiers = List.of();
 
     @Nullable
     @Autowired(required = false)
     private KafkaTemplate<String, AlertTriggerEvent> kafkaTemplate;
+
+    @Autowired(required = false)
+    public void setNotifiers(List<Notifier> notifiers) {
+        this.notifiers = notifiers;
+    }
 
     @Transactional
     public void checkAndNotify(AnalyzedThreatEvent event) {
@@ -47,25 +61,13 @@ public class AlertService {
         }
 
         // Guard: convert affectedTechnologies to array, handle null case
-        String[] techArray =
-            event.affectedTechnologies() == null
-                ? new String[0]
-                : event.affectedTechnologies().toArray(new String[0]);
+        String[] techArray = TechnologyNames
+            .normalizeAll(event.affectedTechnologies()).toArray(new String[0]);
 
         List<AlertRule> foundMatchingRules =
             alertRuleRepository.findMatchingRules(severity.name(), techArray);
 
-        // for each rule - get user, send email
-        User[] users = foundMatchingRules
-            .stream()
-            .map(AlertRule::getUser)
-            .toArray(User[]::new);
-
-        String[] emailsToNotify = Arrays.stream(users)
-            .map(User::getEmail)
-            .toArray(String[]::new);
-
-        if (emailsToNotify.length == 0) {
+        if (foundMatchingRules.isEmpty()) {
             return;
         }
 
@@ -78,8 +80,8 @@ public class AlertService {
                 )
             );
 
-        for (User user : users) {
-            sendAlertToUser(user, threat, event.title(), event.aiSummary(), severity);
+        for (AlertRule rule : foundMatchingRules) {
+            sendAlertToUser(rule.getUser(), threat, event.title(), event.aiSummary(), severity);
         }
     }
 
@@ -87,9 +89,8 @@ public class AlertService {
     public void checkAndNotifyForThreat(Threat threat) {
         if (threat.getSeverity() == null || threat.getAiSummary() == null) return;
 
-        String[] techArray = threat.getAffectedTechnologies() == null
-            ? new String[0]
-            : threat.getAffectedTechnologies().toArray(new String[0]);
+        String[] techArray = TechnologyNames
+            .normalizeAll(threat.getAffectedTechnologies()).toArray(new String[0]);
 
         List<AlertRule> matchingRules = alertRuleRepository
             .findMatchingRules(threat.getSeverity().name(), techArray);
@@ -100,23 +101,58 @@ public class AlertService {
         }
     }
 
-    private void sendAlertToUser(User user, Threat threat, String subject,
-                                 String htmlContent, Severity severity) {
+    /**
+     * Creates the in-app alert and, if the user wants it, sends it through the optional
+     * channels as well.
+     * <p>
+     * The history row is the record that "this user was told about this threat", and a
+     * row stops every later attempt. So it is written only when nothing is left to
+     * retry: a temporary delivery failure leaves no row, and the scheduler tries again
+     * on its next run. A permanent failure is logged and the in-app alert still counts,
+     * otherwise a wrong API key would be retried on every run.
+     */
+    private void sendAlertToUser(User user, Threat threat, String title,
+                                 String summary, Severity severity) {
         if (alertHistoryRepository.existsByUserIdAndThreatId(user.getId(), threat.getId())) {
             return;
         }
-        emailNotifier.sendAlert(new String[]{ user.getEmail() }, subject, htmlContent);
+
+        String channel = IN_APP_CHANNEL;
+        if (!notifiers.isEmpty() && wantsOutgoingAlerts(user)) {
+            AlertMessage message = new AlertMessage(title, summary, severity, threat.getSourceUrl());
+            for (Notifier notifier : notifiers) {
+                NotificationResult result = notifier.send(message);
+                if (result == NotificationResult.RETRYABLE_FAILURE) {
+                    log.warn("Alert for threat {} not recorded, {} delivery will be retried",
+                            threat.getId(), notifier.channel());
+                    return;
+                }
+                if (result == NotificationResult.SENT) {
+                    channel = notifier.channel();
+                }
+            }
+        }
 
         AlertHistory history = new AlertHistory();
         history.setThreat(threat);
-        history.setChannel("EMAIL");
+        history.setChannel(channel);
         history.setUser(user);
         alertHistoryRepository.save(history);
 
+        AlertTriggerEvent trigger =
+            new AlertTriggerEvent(user.getId(), title, severity, threat.getId());
         if (kafkaTemplate != null) {
-            kafkaTemplate.send(KafkaConfig.ALERT_TRIGGERS_TOPIC,
-                new AlertTriggerEvent(user.getId(), subject, severity, threat.getId()));
+            kafkaTemplate.send(KafkaConfig.ALERT_TRIGGERS_TOPIC, trigger);
+        } else {
+            // No message bus: deliver the live notification inside this process
+            eventPublisher.publishEvent(trigger);
         }
+    }
+
+    private boolean wantsOutgoingAlerts(User user) {
+        return userPreferencesRepository.findByUser(user)
+            .map(UserPreferences::isEmailAlertsEnabled)
+            .orElse(false);
     }
 
     private AlertRuleResponse mapAlertRuleToResponseObject(
@@ -142,7 +178,7 @@ public class AlertService {
         rule.setName(request.name());
         rule.setActive(true);
         rule.setMinSeverity(request.minSeverity());
-        rule.setTechnologiesFilter(request.technologiesFilter());
+        rule.setTechnologiesFilter(TechnologyNames.normalizeAll(request.technologiesFilter()));
         alertRuleRepository.save(rule);
         return mapAlertRuleToResponseObject(rule);
     }
@@ -167,7 +203,7 @@ public class AlertService {
         if (request.name() != null) {
             alertRule.setName(request.name());
         }
-        alertRule.setTechnologiesFilter(request.technologiesFilter());
+        alertRule.setTechnologiesFilter(TechnologyNames.normalizeAll(request.technologiesFilter()));
         alertRule.setMinSeverity(request.minSeverity());
         if (request.active() != null) {
             alertRule.setActive(request.active());

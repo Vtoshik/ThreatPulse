@@ -22,6 +22,18 @@ app:
   pipeline:
     kafka-enabled: false
 
+  # The hosted version is a read-only demo: nobody can register or change the shared
+  # demo account. Override with the environment variables only for a private deployment.
+  auth:
+    registration-enabled: ${REGISTRATION_ENABLED:false}
+    demo-enabled: ${DEMO_ENABLED:true}
+    credentials-change-enabled: ${CREDENTIALS_CHANGE_ENABLED:false}
+
+  notifications:
+    email:
+      enabled: ${EMAIL_ALERTS_ENABLED:false}
+      to: ${EMAIL_ALERTS_TO:}
+
   api:
     nvd-key: ${NVD_API_KEY:}
     news-api-key: ${NEWS_API_KEY:}
@@ -32,14 +44,14 @@ app:
     base-url: https://router.huggingface.co/hf-inference/models
 
   groq:
-    api-key: ${GROQ_API_KEY}
+    api-key: ${GROQ_API_KEY:}
     model: openai/gpt-oss-120b
     base-url: https://api.groq.com/openai/v1
 
   resend:
-    api-key: ${RESEND_API_KEY}
+    api-key: ${RESEND_API_KEY:}
     base-url: https://api.resend.com
-    source-email: ${RESEND_SOURCE_EMAIL:noreply@threatpulse.dev}
+    source-email: ${RESEND_SOURCE_EMAIL:}
 
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:9000}

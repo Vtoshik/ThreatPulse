@@ -60,6 +60,20 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 app:
+  auth:
+    # Which account features this deployment has. The hosted demo turns the first and
+    # the third off, a local installation turns the demo account off.
+    registration-enabled: true
+    demo-enabled: true
+    credentials-change-enabled: true
+  local-user:
+    # Creates the single account of a local installation on first start (see application-local.yml)
+    enabled: false
+  notifications:
+    email:
+      # Optional extra channel. Recipients come from here, never from the database.
+      enabled: false
+      to: ""
   collector:
     enabled: true
   pipeline:

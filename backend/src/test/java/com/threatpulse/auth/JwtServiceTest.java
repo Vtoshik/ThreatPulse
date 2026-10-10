@@ -30,7 +30,7 @@ public class JwtServiceTest {
     }
 
     private User userWithId(Long id) {
-        User user = new User("user" + id, "user" + id + "@example.com", "hash");
+        User user = new User("user" + id, "hash");
         user.setId(id);
         return user;
     }
@@ -59,13 +59,13 @@ public class JwtServiceTest {
     }
 
     @Test
-    void generateToken_shouldNotPutEmailOrUsernameIntoToken() {
+    void generateToken_shouldNotPutUsernameIntoToken() {
         User user = userWithId(7L);
         String token = jwtService.generateToken(user);
 
         // A JWT payload is only Base64 encoded: anyone holding the token can read it
         String payload = new String(Decoders.BASE64URL.decode(token.split("\\.")[1]));
-        assertThat(payload).doesNotContain(user.getEmail()).doesNotContain(user.getUsername());
+        assertThat(payload).doesNotContain(user.getUsername());
     }
 
     @Test
@@ -111,5 +111,34 @@ public class JwtServiceTest {
     @Test
     void extractUserId_shouldThrowJwtException_forGarbageToken() {
         assertThatThrownBy(() -> jwtService.extractUserId("not-a-jwt")).isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    void isTokenValid_shouldReturnFalse_afterTheTokenVersionOfTheUserWasRaised() {
+        User user = userWithId(1L);
+        String token = jwtService.generateToken(user);
+
+        // A password change raises the version, so earlier tokens must stop working
+        user.setTokenVersion(1);
+
+        assertThat(jwtService.isTokenValid(token, user)).isFalse();
+    }
+
+    @Test
+    void isTokenValid_shouldReturnTrue_forATokenIssuedForTheCurrentVersion() {
+        User user = userWithId(1L);
+        user.setTokenVersion(3);
+        String token = jwtService.generateToken(user);
+
+        assertThat(jwtService.isTokenValid(token, user)).isTrue();
+    }
+
+    @Test
+    void isTokenValid_shouldAcceptATokenWithoutVersionClaim_forVersionZero() {
+        // Tokens issued before versions existed must keep working until they expire
+        User user = userWithId(1L);
+        String legacy = tokenWith("1", new Date(System.currentTimeMillis() + 60_000));
+
+        assertThat(jwtService.isTokenValid(legacy, user)).isTrue();
     }
 }

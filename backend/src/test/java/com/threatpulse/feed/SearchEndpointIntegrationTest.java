@@ -70,7 +70,6 @@ public class SearchEndpointIntegrationTest extends BaseIntegrationTest {
         String unique = UUID.randomUUID().toString().substring(0, 8);
         RegisterRequest request = new RegisterRequest();
         request.setUsername("user-" + unique);
-        request.setEmail(unique + "@example.com");
         request.setPassword("password123");
         return restTemplate.postForEntity("/api/auth/register", request, AuthResponse.class)
                 .getBody().getAccessToken();

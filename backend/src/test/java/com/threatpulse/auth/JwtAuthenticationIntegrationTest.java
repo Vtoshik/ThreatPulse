@@ -38,17 +38,16 @@ public class JwtAuthenticationIntegrationTest extends BaseIntegrationTest {
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
-    private record Registered(String username, String email, String password, String token) {}
+    private record Registered(String username, String password, String token) {}
 
     private Registered register() {
         String unique = UUID.randomUUID().toString().substring(0, 8);
         RegisterRequest request = new RegisterRequest();
         request.setUsername("user-" + unique);
-        request.setEmail(unique + "@example.com");
         request.setPassword("password123");
         String token = restTemplate.postForEntity("/api/auth/register", request, AuthResponse.class)
                 .getBody().getAccessToken();
-        return new Registered(request.getUsername(), request.getEmail(), request.getPassword(), token);
+        return new Registered(request.getUsername(), request.getPassword(), token);
     }
 
     private ResponseEntity<UserProfileResponse> getProfile(String token) {
@@ -72,7 +71,6 @@ public class JwtAuthenticationIntegrationTest extends BaseIntegrationTest {
         ResponseEntity<UserProfileResponse> response = getProfile(user.token());
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().email()).isEqualTo(user.email());
         assertThat(response.getBody().username()).isEqualTo(user.username());
     }
 
@@ -80,7 +78,7 @@ public class JwtAuthenticationIntegrationTest extends BaseIntegrationTest {
     void protectedEndpoint_shouldAccept_tokenFromLogin() {
         Registered user = register();
         LoginRequest login = new LoginRequest();
-        login.setEmail(user.email());
+        login.setUsername(user.username());
         login.setPassword(user.password());
         String loginToken = restTemplate.postForEntity("/api/auth/login", login, AuthResponse.class)
                 .getBody().getAccessToken();
@@ -88,16 +86,16 @@ public class JwtAuthenticationIntegrationTest extends BaseIntegrationTest {
         ResponseEntity<UserProfileResponse> response = getProfile(loginToken);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().email()).isEqualTo(user.email());
+        assertThat(response.getBody().username()).isEqualTo(user.username());
     }
 
     @Test
     void protectedEndpoint_shouldReturn401_notServerError_forTokenWithOldStyleSubject() {
         Registered user = register();
 
-        // Tokens issued before the id subject carry an email (or a username) instead of a number
+        // Tokens issued before the id subject carry a username (or an email) instead of a number
         ResponseEntity<String> byEmail = restTemplate.exchange("/api/user/profile", HttpMethod.GET,
-                bearer(tokenWithSubject(user.email())), String.class);
+                bearer(tokenWithSubject("someone@example.com")), String.class);
         ResponseEntity<String> byUsername = restTemplate.exchange("/api/user/profile", HttpMethod.GET,
                 bearer(tokenWithSubject(user.username())), String.class);
 

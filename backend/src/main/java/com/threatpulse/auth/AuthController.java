@@ -1,10 +1,12 @@
 package com.threatpulse.auth;
 
+import com.threatpulse.auth.dto.AuthConfigResponse;
 import com.threatpulse.auth.dto.AuthResponse;
 import com.threatpulse.auth.dto.LoginRequest;
 import com.threatpulse.auth.dto.RegisterRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,6 +40,12 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse result = authService.login(request);
         return ResponseEntity.ok(result);
+    }
+
+    // GET /api/auth/config : Which account features this server has (public)
+    @GetMapping("/config")
+    public AuthConfigResponse config() {
+        return authService.getConfig();
     }
 
     // POST /api/auth/demo : Returns a JWT for the pre-seeded demo account

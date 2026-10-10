@@ -21,7 +21,6 @@ public class AuthControllerIntegrationTest extends BaseIntegrationTest{
     void register_shouldReturn200_withToken() {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("testuser");
-        request.setEmail("test@example.com");
         request.setPassword("password123");
 
         ResponseEntity<AuthResponse> response = restTemplate
@@ -37,13 +36,12 @@ public class AuthControllerIntegrationTest extends BaseIntegrationTest{
         // first register the user
         RegisterRequest register = new RegisterRequest();
         register.setUsername("testuser2");
-        register.setEmail("login@example.com");
         register.setPassword("password123");
         restTemplate.postForEntity("/api/auth/register", register, AuthResponse.class);
 
         // then try to login
         LoginRequest login  = new LoginRequest();
-        login.setEmail("login@example.com");
+        login.setUsername("testuser2");
         login.setPassword("password123");
 
         ResponseEntity<AuthResponse> response = restTemplate

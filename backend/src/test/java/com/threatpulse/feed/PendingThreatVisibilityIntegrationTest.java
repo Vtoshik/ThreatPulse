@@ -85,7 +85,7 @@ public class PendingThreatVisibilityIntegrationTest extends BaseIntegrationTest 
         pending = save("Pending " + keyword, AnalysisStatus.PENDING_ANALYSIS);
 
         String unique = UUID.randomUUID().toString().substring(0, 8);
-        user = userRepository.save(new User("user-" + unique, unique + "@example.com", "hash"));
+        user = userRepository.save(new User("user-" + unique, "hash"));
     }
 
     private static List<Long> ids(List<ThreatResponse> threats) {

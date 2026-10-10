@@ -30,6 +30,8 @@ public class JwtService {
     private long expiryHours;
 
     // Decode the Base64-encoded secret key and create a HMAC SHA signing key
+    private static final String TOKEN_VERSION_CLAIM = "ver";
+
     private SecretKey getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
@@ -37,13 +39,14 @@ public class JwtService {
 
     // Generate a JWT token with subject, issued date, expiration, and signature
     public String generateToken(User user) {
-        return Jwts.builder().subject(String.valueOf(user.getId())).issuedAt(new Date())
+        return Jwts.builder().subject(String.valueOf(user.getId()))
+                .claim(TOKEN_VERSION_CLAIM, user.getTokenVersion()).issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiryHours * 60 * 60 *1000))
                 .signWith(getSigningKey()).compact();
     }
 
     // Extract id (subject) from the JWT token
-    Long extractUserId(String token) {
+    public Long extractUserId(String token) {
         String id = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
@@ -64,9 +67,19 @@ public class JwtService {
                 .parseSignedClaims(token).getPayload().getExpiration();
     }
 
-    // Validate the token by checking username match and expiration
-    boolean isTokenValid(String token, User user) {
+    // Tokens issued before versions existed have no claim, which means version 0
+    int extractTokenVersion(String token) {
+        Integer version = Jwts.parser().verifyWith(getSigningKey()).build()
+                .parseSignedClaims(token).getPayload()
+                .get(TOKEN_VERSION_CLAIM, Integer.class);
+        return version == null ? 0 : version;
+    }
+
+    // Validate the token: same user, same token version, not expired
+    public boolean isTokenValid(String token, User user) {
         final Long id = extractUserId(token);
-        return id.equals(user.getId()) && extractTokenExpiration(token).after(new Date());
+        return id.equals(user.getId())
+                && extractTokenVersion(token) == user.getTokenVersion()
+                && extractTokenExpiration(token).after(new Date());
     }
 }

@@ -7,11 +7,10 @@ import java.util.Optional;
 /**
  * Repository interface for User entity.
  * Extends JpaRepository to provide standard CRUD operations.
- * Also defines custom query methods for finding a user by email
- * and checking if an email is already in use.
+ * Nicknames are compared without case, so "Viktor" and "viktor" are the same user.
  */
 public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByEmail(String email);
-    boolean existsByEmail(String email);
-    boolean existsByUsername(String username);
+    Optional<User> findByUsernameIgnoreCase(String username);
+    boolean existsByUsernameIgnoreCase(String username);
+    long countByUsernameNotIgnoreCase(String username);
 }

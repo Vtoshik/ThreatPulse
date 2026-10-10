@@ -1,7 +1,10 @@
 package com.threatpulse.user;
 
+import com.threatpulse.auth.dto.AuthResponse;
+import com.threatpulse.user.dto.ChangeCredentialsRequest;
 import com.threatpulse.user.dto.UpdatePreferencesRequest;
 import com.threatpulse.user.dto.UserProfileResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +25,12 @@ public class UserController {
     @PutMapping("/technologies")
     public void updateUserTechnologies(@AuthenticationPrincipal User user, @RequestBody Set<String> technologies){
         userService.updateTechnologies(user, technologies);
+    }
+
+    @PutMapping("/credentials")
+    public AuthResponse changeCredentials(@AuthenticationPrincipal User user,
+                                          @Valid @RequestBody ChangeCredentialsRequest request){
+        return userService.changeCredentials(user, request);
     }
 
     @PutMapping("/preferences")

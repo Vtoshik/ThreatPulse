@@ -29,7 +29,7 @@ import lombok.Setter;
 
 /**
  * JPA entity representing a user in the system.
- * Stores essential user information including username, email, and hashed password.
+ * Stores a nickname and a hashed password. No personal data such as an email is kept.
  * Supports auditing fields to track creation and last modification times.
  * This entity is mapped to the "users" table in the database.
  */
@@ -45,10 +45,11 @@ public class User implements UserDetails {
     private Long id;
     @Column(nullable = false, unique = true)
     private String username;
-    @Column(nullable = false, unique = true)
-    private String email;
     @Column(nullable = false)
     private String passwordHash;
+    // Raised when the password changes, which invalidates all tokens issued before
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion = 0;
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -63,9 +64,8 @@ public class User implements UserDetails {
     private Set<String> technologies = new HashSet<>();
 
 
-    public User(String username, String email, String passwordHash) {
+    public User(String username, String passwordHash) {
         this.username = username;
-        this.email = email;
         this.passwordHash = passwordHash;
     }
 
@@ -79,8 +79,6 @@ public class User implements UserDetails {
                                                         
     @Override                                                                 
     public String getUsername() { return username; }
-
-    public String getEmail() { return email; }
 
     public boolean isAccountNonExpired() {
         return true;

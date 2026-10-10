@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# application-local.yml — a private installation on your own machine
+#
+# One user, no registration, no demo account, no Kafka, no Redis.
+# Everything comes from environment variables, see .env.example in the repository root.
+# ─────────────────────────────────────────────────────────────────────────────
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+  cache:
+    type: none
+
+server:
+  port: ${PORT:8080}
+
+app:
+  pipeline:
+    kafka-enabled: false
+
+  auth:
+    registration-enabled: false
+    demo-enabled: false
+    credentials-change-enabled: true
+
+  local-user:
+    enabled: true
+    username: ${TP_USERNAME:}
+    password: ${TP_PASSWORD:}
+
+  notifications:
+    email:
+      enabled: ${EMAIL_ALERTS_ENABLED:false}
+      to: ${EMAIL_ALERTS_TO:}
+
+  resend:
+    api-key: ${RESEND_API_KEY:}
+    base-url: https://api.resend.com
+    source-email: ${RESEND_SOURCE_EMAIL:}
+
+  api:
+    nvd-key: ${NVD_API_KEY:}
+    news-api-key: ${NEWS_API_KEY:}
+
+  huggingface:
+    api-key: ${HUGGINGFACE_API_KEY:}
+    model: BAAI/bge-small-en-v1.5
+    base-url: https://router.huggingface.co/hf-inference/models
+
+  groq:
+    api-key: ${GROQ_API_KEY:}
+    model: openai/gpt-oss-120b
+    base-url: https://api.groq.com/openai/v1
+
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:9000}
+
+  jwt:
+    secret: ${JWT_SECRET}
+    expiry-hours: ${JWT_EXPIRY_HOURS:24}
+    refresh-expiry-days: ${JWT_REFRESH_EXPIRY_DAYS:30}
+
+logging:
+  level:
+    com.threatpulse: INFO
+    org.springframework: WARN

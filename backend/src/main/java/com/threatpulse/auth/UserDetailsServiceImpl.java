@@ -11,20 +11,19 @@ import com.threatpulse.user.UserRepository;
 
 /**
  * Implementation of Spring Security's UserDetailsService.
- * Loads user-specific data by email for authentication purposes.
- * This service is used by Spring Security to retrieve user details
- * when validating credentials or generating JWT tokens.
+ * Loads user-specific data by nickname for authentication purposes.
+ * The JWT filter uses {@link #loadUserById(Long)} because the token subject is the user id.
  */
 @Service
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
     private final UserRepository userRepository;
 
-    public UserDetails loadUserByUsername(String email)
+    @Override
+    public UserDetails loadUserByUsername(String username)
             throws UsernameNotFoundException {
-        return userRepository.findByEmail(email)                                      
-            .orElseThrow(() -> new UsernameNotFoundException("User not found: " +     
-        email));
+        return userRepository.findByUsernameIgnoreCase(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 
     public User loadUserById(Long id) throws UsernameNotFoundException {

@@ -37,7 +37,7 @@ public class AlertRuleRepositoryIntegrationTest extends BaseIntegrationTest {
         alertRuleRepository.deleteAll();
 
         String unique = UUID.randomUUID().toString().substring(0, 8);
-        user = userRepository.save(new User("user-" + unique, unique + "@example.com", "hash"));
+        user = userRepository.save(new User("user-" + unique, "hash"));
     }
 
     private AlertRule saveRule(Severity minSeverity, String[] technologiesFilter, boolean active) {

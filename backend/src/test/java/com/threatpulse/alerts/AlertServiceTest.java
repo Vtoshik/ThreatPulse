@@ -4,8 +4,14 @@ import com.threatpulse.alerts.dto.AlertRuleRequest;
 import com.threatpulse.alerts.dto.AlertRuleResponse;
 import com.threatpulse.analyzer.dto.AnalyzedThreatEvent;
 import com.threatpulse.common.domain.Severity;
+import com.threatpulse.common.domain.Threat;
 import com.threatpulse.feed.ThreatRepository;
 import com.threatpulse.user.User;
+import com.threatpulse.user.UserPreferences;
+import com.threatpulse.user.UserPreferencesRepository;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,22 +22,54 @@ import org.springframework.security.access.AccessDeniedException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class AlertServiceTest {
     @Mock private AlertRuleRepository alertRuleRepository;
-    @Mock private EmailNotifier emailNotifier;
     @Mock private AlertHistoryRepository alertHistoryRepository;
     @Mock private ThreatRepository threatRepository;
+    @Mock private UserPreferencesRepository userPreferencesRepository;
+    @Mock private Notifier notifier;
+    @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks private AlertService alertService;
 
+    @BeforeEach
+    void addNotifier() {
+        alertService.setNotifiers(java.util.List.of(notifier));
+    }
+
+    private static Threat threat(long id) {
+        Threat threat = new Threat();
+        threat.setId(id);
+        threat.setTitle("Spring RCE");
+        threat.setAiSummary("A remote code execution flaw");
+        threat.setSeverity(Severity.CRITICAL);
+        threat.setSourceUrl("https://example.com/advisory");
+        threat.setAffectedTechnologies(java.util.Set.of("spring-boot"));
+        return threat;
+    }
+
+    private AlertRule matchingRuleFor(User user) {
+        AlertRule rule = new AlertRule();
+        rule.setUser(user);
+        when(alertRuleRepository.findMatchingRules(any(), any())).thenReturn(java.util.List.of(rule));
+        return rule;
+    }
+
+    private void userWantsOutgoingAlerts(User user, boolean enabled) {
+        UserPreferences preferences = new UserPreferences();
+        preferences.setEmailAlertsEnabled(enabled);
+        when(userPreferencesRepository.findByUser(user)).thenReturn(Optional.of(preferences));
+    }
+
     @Test
     void deleteRule_shouldThrowException_whenRuleDoesNotBelongToUser(){
-        User user1 = new User("Bob", "bob@example.com", "password");
-        User user2 = new User("Alex", "alex@example.com", "hardpassword");
+        User user1 = new User("Bob", "password");
+        User user2 = new User("Alex", "hardpassword");
 
         user1.setId(1L);
         user2.setId(2L);
@@ -48,7 +86,7 @@ public class AlertServiceTest {
 
     @Test
     void deleteRule_shouldDeleteRule_whenRulesBelongsToUser(){
-        User user1 = new User("Maria", "maria@example.com", "password123");
+        User user1 = new User("Maria", "password123");
         user1.setId(1L);
 
         AlertRule alertRule = new AlertRule();
@@ -63,7 +101,7 @@ public class AlertServiceTest {
 
     @Test
     void createRule_shouldSaveAndReturnResponse() {
-        User user = new User("John", "john@example.com", "pass");
+        User user = new User("John", "pass");
         user.setId(1L);
 
         AlertRuleRequest request = new AlertRuleRequest(
@@ -98,13 +136,123 @@ public class AlertServiceTest {
         alertService.checkAndNotify(event);
 
         // then
-        verify(emailNotifier, org.mockito.Mockito.never())
-                .sendAlert(any(), any(), any());
+        verify(notifier, never()).send(any());
+        verify(alertHistoryRepository, never()).save(any());
+    }
+
+    @Test
+    void checkAndNotifyForThreat_shouldRecordTheChannel_whenDeliverySucceeds() {
+        User user = new User("anna", "hash");
+        user.setId(1L);
+        matchingRuleFor(user);
+        userWantsOutgoingAlerts(user, true);
+        when(alertHistoryRepository.existsByUserIdAndThreatId(1L, 10L)).thenReturn(false);
+        when(notifier.channel()).thenReturn("EMAIL");
+        when(notifier.send(any())).thenReturn(NotificationResult.SENT);
+
+        alertService.checkAndNotifyForThreat(threat(10L));
+
+        ArgumentCaptor<AlertHistory> saved = ArgumentCaptor.forClass(AlertHistory.class);
+        verify(alertHistoryRepository).save(saved.capture());
+        assertThat(saved.getValue().getChannel()).isEqualTo("EMAIL");
+    }
+
+    @Test
+    void checkAndNotifyForThreat_shouldNotRecordHistory_whenDeliveryMustBeRetried() {
+        User user = new User("anna", "hash");
+        user.setId(1L);
+        matchingRuleFor(user);
+        userWantsOutgoingAlerts(user, true);
+        when(alertHistoryRepository.existsByUserIdAndThreatId(1L, 10L)).thenReturn(false);
+        when(notifier.channel()).thenReturn("EMAIL");
+        when(notifier.send(any())).thenReturn(NotificationResult.RETRYABLE_FAILURE);
+
+        alertService.checkAndNotifyForThreat(threat(10L));
+
+        // A history row would stop every later attempt, and the alert would be lost
+        verify(alertHistoryRepository, never()).save(any());
+    }
+
+    @Test
+    void checkAndNotifyForThreat_shouldKeepTheInAppAlert_whenDeliveryFailsForGood() {
+        User user = new User("anna", "hash");
+        user.setId(1L);
+        matchingRuleFor(user);
+        userWantsOutgoingAlerts(user, true);
+        when(alertHistoryRepository.existsByUserIdAndThreatId(1L, 10L)).thenReturn(false);
+        when(notifier.send(any())).thenReturn(NotificationResult.PERMANENT_FAILURE);
+
+        alertService.checkAndNotifyForThreat(threat(10L));
+
+        ArgumentCaptor<AlertHistory> saved = ArgumentCaptor.forClass(AlertHistory.class);
+        verify(alertHistoryRepository).save(saved.capture());
+        assertThat(saved.getValue().getChannel()).isEqualTo("IN_APP");
+    }
+
+    @Test
+    void checkAndNotifyForThreat_shouldNotCallNotifiers_whenUserDidNotAskForThem() {
+        User user = new User("anna", "hash");
+        user.setId(1L);
+        matchingRuleFor(user);
+        userWantsOutgoingAlerts(user, false);
+        when(alertHistoryRepository.existsByUserIdAndThreatId(1L, 10L)).thenReturn(false);
+
+        alertService.checkAndNotifyForThreat(threat(10L));
+
+        verify(notifier, never()).send(any());
+        ArgumentCaptor<AlertHistory> saved = ArgumentCaptor.forClass(AlertHistory.class);
+        verify(alertHistoryRepository).save(saved.capture());
+        assertThat(saved.getValue().getChannel()).isEqualTo("IN_APP");
+    }
+
+    @Test
+    void checkAndNotifyForThreat_shouldPublishLiveNotificationInProcess_whenThereIsNoKafka() {
+        User user = new User("anna", "hash");
+        user.setId(1L);
+        matchingRuleFor(user);
+        userWantsOutgoingAlerts(user, false);
+        when(alertHistoryRepository.existsByUserIdAndThreatId(1L, 10L)).thenReturn(false);
+
+        alertService.checkAndNotifyForThreat(threat(10L));
+
+        ArgumentCaptor<AlertTriggerEvent> published = ArgumentCaptor.forClass(AlertTriggerEvent.class);
+        verify(eventPublisher).publishEvent(published.capture());
+        assertThat(published.getValue().userId()).isEqualTo(1L);
+        assertThat(published.getValue().threatId()).isEqualTo(10L);
+    }
+
+    @Test
+    void checkAndNotifyForThreat_shouldNotPublishLiveNotification_whenDeliveryMustBeRetried() {
+        User user = new User("anna", "hash");
+        user.setId(1L);
+        matchingRuleFor(user);
+        userWantsOutgoingAlerts(user, true);
+        when(alertHistoryRepository.existsByUserIdAndThreatId(1L, 10L)).thenReturn(false);
+        when(notifier.channel()).thenReturn("EMAIL");
+        when(notifier.send(any())).thenReturn(NotificationResult.RETRYABLE_FAILURE);
+
+        alertService.checkAndNotifyForThreat(threat(10L));
+
+        // Otherwise the user would get a notification again on every retry
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void checkAndNotifyForThreat_shouldSkipUserWhoWasAlreadyNotified() {
+        User user = new User("anna", "hash");
+        user.setId(1L);
+        matchingRuleFor(user);
+        when(alertHistoryRepository.existsByUserIdAndThreatId(1L, 10L)).thenReturn(true);
+
+        alertService.checkAndNotifyForThreat(threat(10L));
+
+        verify(notifier, never()).send(any());
+        verify(alertHistoryRepository, never()).save(any());
     }
 
     @Test
     void getRulesForUser_shouldReturnMappedResponses() {
-        User user = new User("Anna", "anna@example.com", "pass");
+        User user = new User("Anna", "pass");
         user.setId(1L);
 
         AlertRule rule1 = new AlertRule();
