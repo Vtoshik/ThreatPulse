@@ -1,93 +1,142 @@
 # ThreatPulse
 
-**AI-powered cybersecurity intelligence platform** that monitors public vulnerability databases and security news, analyzes threats using large language models, and delivers personalized alerts based on your technology stack.
+**A security intelligence tool for developers.** It collects CVEs and security news from public sources, lets an LLM classify them, and alerts you only about what matches the technologies you run.
+
+ThreatPulse collects **no personal data**: an account is a nickname and a password, there is no email address, and the intended way to run it is on your own machine.
 
 ---
 
 ## Motivation
 
-CVE feeds and security newsletters dump hundreds of alerts a day. Most of it doesn't apply to what you're running. By the time something relevant shows up, it's buried three pages back. ThreatPulse collects from NVD and RSS feeds, runs each threat through an LLM to extract what's actually affected, and only notifies you when it matches your stack.
+CVE feeds and security newsletters dump hundreds of items a day. Most of them do not apply to what you run, and the ones that do are buried. ThreatPulse reads NVD and security RSS feeds, asks an LLM what is actually affected and how severe it is, and shows you the items that match your stack.
 
-## What ThreatPulse Does
+## Two ways to run it
 
-Collects threat data from multiple public sources every two hours, uses AI to extract structured insights (severity, affected technologies, recommended actions), and matches them against each user's tech stack — sending alerts only for what's relevant to them.
+| | Local installation | Hosted demo |
+|---|---|---|
+| Purpose | The real tool, for one person | Look at the interface without installing anything |
+| Accounts | One account, created on first start from your environment variables | One shared demo account, no registration |
+| Account changes | Nickname and password can be changed in Settings | Disabled (the account is shared) |
+| Email | Optional, off by default | Off |
+| Personal data stored | None | None |
+
+The switch is configuration, not code: see [Account features](#account-features).
 
 ---
 
-## Quick Start
+## Quick start (local installation)
+
+**Prerequisites:** Docker.
 
 ```bash
 git clone https://github.com/Vtoshik/threatpulse
 cd threatpulse
-cp backend/src/main/resources/application-dev.yml.example \
-   backend/src/main/resources/application-dev.yml
-# fill in your API keys in application-dev.yml
-docker compose up -d
-cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+# 1. Configuration: copy the example and choose your nickname and password
+cp .env.example .env
+#    edit .env: TP_USERNAME, TP_PASSWORD (not "change-me"), JWT_SECRET, and the API keys you have
+
+# 2. Database, backend and frontend in one command (the first build takes a few minutes)
+docker compose -f docker-compose.local.yml up --build
 ```
 
-Backend runs on `http://localhost:8080`. Frontend is optional — see [Local Development](#local-development).
+Open http://localhost:9000 and sign in with `TP_USERNAME` / `TP_PASSWORD`.
+
+Only the web ports are published, and only on `127.0.0.1`. The database is reachable by the backend alone. Your data stays in the `threatpulse_local_data` Docker volume; `docker compose -f docker-compose.local.yml down -v` deletes it.
+
+<details>
+<summary>Run from source instead (Java 21, Node.js 22)</summary>
+
+```bash
+docker compose up -d postgres
+
+cd backend
+set -a && source ../.env && set +a
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+
+# second terminal
+cd frontend && npm install && npm run dev
+```
+
+</details>
+
+The application refuses to start when `TP_PASSWORD` is empty, shorter than 8 characters, or the placeholder. A default password on a security tool would be a vulnerability, so there is none.
+
+Without `GROQ_API_KEY` collected items are stored but stay hidden until they can be analyzed (the log says so once at start). Without `HUGGINGFACE_API_KEY` search falls back to keyword search.
 
 ---
 
-## Usage
-
-Register via `POST /api/auth/register`, then use the JWT token from `POST /api/auth/login` for all subsequent requests.
-
-Set your tech stack via `PUT /api/user/technologies` — this is what ThreatPulse matches against when deciding whether to alert you. Create alert rules via `POST /api/alerts/rules` with a minimum severity and optional technology filter.
-
-The collector runs every two hours automatically. To trigger it manually, restart the backend — it runs on startup as well. New threats appear in `GET /api/threats` once the Groq analysis finishes.
-
----
-
-## Architecture
-
-Event-driven modular monolith built on Spring Boot 3 and Apache Kafka.
+## How it works
 
 ```
-[Data Sources]
+[Data sources]
 NVD/NIST API ─┐
-Security RSS ─┴──► Collector ──► Kafka (raw-threats) ──► Analyzer ──► PostgreSQL
-                                                             │
-                                                             ├──► Kafka (analyzed-threats)
-                                                             │         │
-                                                             │    ┌────┴─────────────┐
-                                                             │    ▼                 ▼
-                                                             │  Alerts ──► Email   Feed API ──► REST
-                                                             └──► WebSocket ──► Real-time UI
+Security RSS ─┴──► Collector ──► Analyzer (LLM + embeddings) ──► PostgreSQL + pgvector
+                                      │
+                                      ├──► Alerts ──► in-app alert + live notification
+                                      └──► Feed / semantic search ──► REST API ──► Vue dashboard
 ```
 
-Each module communicates only through Kafka topics or shared DTOs — no direct cross-module calls.
+- **Collector** reads NVD and three security RSS feeds on a schedule.
+- **Analyzer** asks the LLM for severity, category, a summary and the affected technologies, and creates an embedding. A failed analysis is saved as *pending* and retried by a background job. Nothing is made up and pending items never reach the feed or an alert.
+- **Alerts** match a threat against each user's rules (minimum severity and technologies). Technology names are brought to one spelling (`Node.js` and `node` both become `nodejs`) before they are compared.
+- **Search** is a vector similarity search (pgvector). It falls back to keyword search when the embedding service is unavailable or no stored item has an embedding yet.
+
+Kafka connects the stages when `app.pipeline.kafka-enabled` is true (the default, used by the `dev` profile). The `local` and `prod` profiles run the same logic in one process without Kafka.
+
+### Notifications
+
+An alert always appears in the **Alerts** page. With Kafka enabled it is also pushed to a connected browser as a live notification.
+
+Email is an optional extra channel for people who host it themselves. It is off by default, the recipient is set in the server configuration (`EMAIL_ALERTS_TO`, never stored in the database), and each user opts in with the *Email alerts* switch in Settings. An alert is recorded as delivered only when the provider accepted it. In the no-Kafka modes a temporary failure is retried by the alert scheduler (every 10 minutes, for threats analyzed in the last 24 hours); with Kafka a failed delivery is not retried.
 
 ---
 
-## Tech Stack
+## Account features
+
+Controlled by three properties (environment variables in the `prod` profile):
+
+| Property | Environment variable (`prod`) | Effect |
+|---|---|---|
+| `app.auth.registration-enabled` | `REGISTRATION_ENABLED` | `POST /api/auth/register` creates accounts |
+| `app.auth.demo-enabled` | `DEMO_ENABLED` | `POST /api/auth/demo` returns a token for the shared demo account |
+| `app.auth.credentials-change-enabled` | `CREDENTIALS_CHANGE_ENABLED` | `PUT /api/user/credentials` may change nickname and password |
+
+`GET /api/auth/config` reports the three switches (and whether email alerts are available) so the interface hides what the server would reject.
+
+---
+
+## Tech stack
 
 | Layer | Technologies |
 |-------|-------------|
-| Backend | Java 21, Spring Boot 3.3, Spring Kafka, Spring Security (JWT), Flyway |
-| AI | Groq API (Llama 3.3 70B), Hugging Face Inference API (embeddings) |
-| Data | PostgreSQL 16 + pgvector, Apache Kafka, Redis |
+| Backend | Java 21, Spring Boot 3.5, Spring Security (JWT, Argon2), Spring Data JPA, Flyway |
+| AI | Groq API (`openai/gpt-oss-120b`), Hugging Face Inference API (`BAAI/bge-small-en-v1.5`, 384 dimensions) |
+| Data | PostgreSQL 16 + pgvector; optional Apache Kafka and Redis |
 | Frontend | Vue 3, TypeScript, Quasar, Pinia, WebSocket/STOMP |
-| DevOps | Docker Compose, GitHub Actions, Railway.app, Grafana Cloud |
+| Delivery | Docker Compose (infrastructure), GitHub Actions, hosted demo on Vercel and Render |
 
 ---
 
-## API Endpoints
+## API
 
-### Auth
+### Auth (public)
 ```
-POST /api/auth/register
-POST /api/auth/login
+GET  /api/auth/config        which account features this server has
+POST /api/auth/login         { username, password } -> { accessToken }
+POST /api/auth/register      { username, password } (when enabled)
+POST /api/auth/demo          shared demo account (when enabled)
 ```
 
 ### Threats (JWT required)
 ```
-GET /api/threats          — paginated feed with severity/category filters
-GET /api/threats/{id}     — single threat detail
+GET /api/threats             paginated feed (severity, category, technology filters)
+GET /api/threats/{id}        single threat
+GET /api/threats/stats       counts by severity and published in the last 24 hours
+GET /api/threats/search      ?q=&limit=&severity=  semantic search with keyword fallback
 ```
 
-### Alert Rules (JWT required)
+### Alerts (JWT required)
 ```
 GET    /api/alerts/rules
 POST   /api/alerts/rules
@@ -101,105 +150,57 @@ GET    /api/alerts/history
 GET /api/user/profile
 PUT /api/user/technologies
 PUT /api/user/preferences
+PUT /api/user/credentials    { currentPassword, newUsername?, newPassword? } (when enabled)
+                             a new password invalidates earlier tokens and returns a fresh one
 ```
 
+Bookmarks live under `/api/bookmarks`.
+
+WebSocket: `/ws`. The STOMP `CONNECT` frame must carry `Authorization: Bearer <token>`. `/topic/threats` is open to every signed-in user, `/topic/alerts/{userId}` only to that user.
+
 ---
 
-## Frontend UI
+## Interface
 
-> **Note:** The frontend is connected to the backend API with JWT auth flow and real data.
-> WebSocket real-time updates are the next planned feature.
-
-### Landing & Auth
-
-| Landing Page | Login | Register |
-|---|---|---|
-| ![Landing](docs/screenshots/LandingPage.png) | ![Login](docs/screenshots/LoginPage.png) | ![Register](docs/screenshots/RegisterPage.png) |
-
-### App
-
-| Dashboard | Threat Feed |
+| Landing | Dashboard |
 |---|---|
-| ![Dashboard](docs/screenshots/Dashboard.png) | ![Threat Feed](docs/screenshots/ThreatFeed.png) |
+| ![Landing](docs/screenshots/LandingPage.png) | ![Dashboard](docs/screenshots/Dashboard.png) |
 
-| Alerts | Watchlist |
+| Threat feed | Alerts |
 |---|---|
-| ![Alerts](docs/screenshots/Alerts.png) | ![Watchlist](docs/screenshots/Watchlist.png) |
+| ![Threat Feed](docs/screenshots/ThreatFeed.png) | ![Alerts](docs/screenshots/Alerts.png) |
 
-![Settings](docs/screenshots/Settings.png)
+| Watchlist | Settings |
+|---|---|
+| ![Watchlist](docs/screenshots/Watchlist.png) | ![Settings](docs/screenshots/Settings.png) |
 
----
-
-## Implementation Progress
-
-### Backend
-- [x] JWT authentication (register, login)
-- [x] Kafka pipeline: collectors → analyzer → fan-out consumers
-- [x] NVD/NIST CVE collector, RSS feed collector
-- [ ] NewsAPI collector
-- [x] Groq AI integration — severity classification, summary, affected technologies
-- [x] Threat feed REST API with pagination
-- [x] Alert rules CRUD with ownership check
-- [x] Email notifications via Resend API
-- [x] User profile with technology stack and preferences
-- [x] PostgreSQL + pgvector, Flyway migrations
-- [x] Unit tests (AlertService, UserService, AuthService, ThreatAnalyzer, AnalyzerConsumer)
-- [ ] Semantic search via pgvector embeddings
-- [ ] Redis caching for feed
-- [x] WebSocket real-time updates
-- [x] Integration tests (Testcontainers)
-- [x] CI/CD with GitHub Actions
-- [ ] Production deployment on Railway
-
-### Frontend
-- [x] Design system — CSS tokens, typography, dark theme
-- [x] Landing page, login, register
-- [x] App layout — sidebar, navigation, top bar
-- [x] Dashboard with stat cards and recent threats table
-- [x] Threat feed with filters and split-panel detail view
-- [x] Threat detail page — CVSS score, affected tech, timeline
-- [x] Semantic search page (UI only)
-- [x] Alert rules — list, create, edit
-- [x] Watchlist page
-- [x] Settings — profile, tech stack, notification preferences
-- [x] Connect to backend REST API (replace mock data)
-- [x] JWT auth flow (login → store token → API interceptor)
-- [x] Real-time WebSocket updates
+*The screenshots were taken before the nickname-only sign-in and may differ in small details.*
 
 ---
 
-## Roadmap
+## Configuration
 
-Highest-impact items planned next, roughly in order:
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD` | PostgreSQL connection (JDBC URL, for example `jdbc:postgresql://localhost:5432/threatpulse`) |
+| `JWT_SECRET` | Base64 secret, at least 32 bytes (`openssl rand -base64 32`) |
+| `TP_USERNAME`, `TP_PASSWORD` | The account created on first start (`local` profile) |
+| `GROQ_API_KEY` | LLM analysis (free at console.groq.com) |
+| `HUGGINGFACE_API_KEY` | Embeddings for semantic search (token with "Make calls to Inference Providers") |
+| `NVD_API_KEY` | Optional, raises the NVD rate limit |
+| `EMAIL_ALERTS_ENABLED`, `EMAIL_ALERTS_TO`, `RESEND_API_KEY`, `RESEND_SOURCE_EMAIL` | Optional email channel (needs a verified sender domain at Resend) |
+| `CORS_ALLOWED_ORIGINS` | Allowed frontend origins, default `http://localhost:9000` |
+| `REGISTRATION_ENABLED`, `DEMO_ENABLED`, `CREDENTIALS_CHANGE_ENABLED` | Account features in the `prod` profile |
 
-- **Semantic search via pgvector** — the `embedding` column exists but nothing writes or reads it yet; search is currently keyword-based, not the vector similarity search the architecture targets.
-- **CISA KEV & EPSS enrichment** — flag threats that are known to be actively exploited (CISA KEV) or have a high real-world exploitation probability (EPSS), instead of relying on LLM-inferred severity alone.
-- **Automatic tech-stack detection** — parse a `pom.xml`/`package.json`/SBOM upload to pre-fill a user's technology stack, instead of requiring manual entry.
-- **Stats dashboard** — a `GET /api/threats/stats` endpoint plus charts for severity trends and top affected technologies over time.
-- **Kafka dead-letter queue + LLM fallback** — route unparseable messages to a DLQ instead of retrying indefinitely, and fall back to a heuristic extractor if the Groq API is rate-limited or down.
+Outgoing HTTP calls have a 5 s connect and a 30 s read timeout (`spring.http.client.*`).
 
 ---
 
-## Local Development
-
-**Prerequisites:** Docker, Java 21, Node.js 18+
+## Development
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/Vtoshik/threatpulse
-cd threatpulse
-
-# 2. Copy and fill in API keys
-cp backend/src/main/resources/application-dev.yml.example \
-   backend/src/main/resources/application-dev.yml
-
-# 3. Start infrastructure (PostgreSQL, Kafka, Redis)
-docker compose up -d
-
-# 4. Start backend
+docker compose up -d                       # PostgreSQL, Kafka, Redis, Kafka UI
 cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-
-# 5. Start frontend (optional)
 cd frontend && npm install && npm run dev
 ```
 
@@ -209,35 +210,41 @@ cd frontend && npm install && npm run dev
 | Frontend | http://localhost:9000 |
 | Kafka UI | http://localhost:8090 |
 
-### Run tests
+The `dev` profile reads `backend/src/main/resources/application-dev.yml`. Copy `application-dev.yml.example` and fill in your keys; the file is git-ignored.
+
+### Tests
 
 ```bash
-cd backend && ./mvnw test
+cd backend && ./mvnw test        # needs Docker: integration tests start PostgreSQL with Testcontainers
+cd frontend && npm run lint && npm run build
 ```
+
+Unit tests alone: `./mvnw test -Dtest='!*IntegrationTest'`.
+
+---
+
+## Known limits
+
+Stated plainly, so nobody has to find them:
+
+- **The hosted demo account is shared and its data is writable.** Nobody can register or change the credentials, but every visitor can edit the shared watchlist, rules and bookmarks.
+- **No token refresh and no logout endpoint.** A token lives until it expires (`JWT_EXPIRY_HOURS`). A password change does invalidate earlier tokens.
+- **Semantic search has no relevance cut-off** and no vector index. It always returns the nearest items, even when none is close.
+- **The LLM is a free-tier model.** The free daily token limit caps how many items can be analyzed per day; the rest wait as pending.
+- **Caching is off in production** (`spring.cache.type: none`) until a managed Redis is chosen.
+- **Email recipients are shared by all users** of one server, which is fine for the single-user local installation and not designed for a multi-user host.
+- **Live updates are a push, not a history.** A browser that was closed misses what happened meanwhile; the feed shows it after a reload.
+
+## Roadmap
+
+- A command line scanner that reads `package-lock.json`, `pom.xml` or `requirements.txt` on your machine and sends only package names and versions, matched against OSV for exact version ranges.
+- CISA KEV and EPSS enrichment to rank findings by real exploitation instead of LLM opinion alone.
+- Token refresh and logout, more collectors (NewsAPI), Checkstyle and coverage gates in CI.
 
 ---
 
 ## Contributing
 
-This is mostly a personal portfolio project, but if you spotted a bug or have a suggestion, open an issue. If you want to submit a PR, open the issue first so we can talk through it before you write any code.
+This is mostly a personal portfolio project. If you found a bug or have a suggestion, open an issue first.
 
-For pull requests:
-- Branch from `dev`, not `main`
-- Keep it focused — one change per PR
-- If you touched the backend, run `./mvnw test` before submitting
-- Checkstyle handles code style, so just make sure the build passes
-
-If you want to use parts of this in your own project, go ahead.
-
----
-
-## Required Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `KAFKA_BOOTSTRAP_SERVERS` | Kafka broker address |
-| `GROQ_API_KEY` | Groq API key (free at console.groq.com) |
-| `NEWS_API_KEY` | NewsAPI.org key (free tier) |
-| `RESEND_API_KEY` | Resend email API key (free tier) |
-| `JWT_SECRET` | Minimum 32-character secret |
+For pull requests: branch from `dev`, keep a change focused, and run `./mvnw test` and `npm run build` before submitting.
