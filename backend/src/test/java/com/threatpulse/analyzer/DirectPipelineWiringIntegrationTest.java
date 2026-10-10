@@ -26,7 +26,7 @@ public class DirectPipelineWiringIntegrationTest extends BaseIntegrationTest {
         assertThat(context.getBean(ThreatEventPublisher.class))
                 .isInstanceOf(DirectThreatEventPublisher.class);
         assertThat(context.getBean(AnalyzedThreatPublisher.class))
-                .isInstanceOf(NoOpAnalyzedThreatPublisher.class);
+                .isInstanceOf(InProcessAnalyzedThreatPublisher.class);
         assertThat(context.getBeansOfType(AlertScheduler.class)).hasSize(1);
         assertThat(context.getBeansOfType(AnalyzerConsumer.class)).isEmpty();
     }
