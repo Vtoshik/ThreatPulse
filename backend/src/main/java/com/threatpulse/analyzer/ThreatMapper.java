@@ -1,5 +1,6 @@
 package com.threatpulse.analyzer;
 
+import com.threatpulse.common.domain.TechnologyNames;
 import com.threatpulse.analyzer.dto.AnalyzedThreatEvent;
 import com.threatpulse.collector.dto.RawThreatEvent;
 import com.threatpulse.common.domain.AnalysisStatus;
@@ -68,9 +69,8 @@ public class ThreatMapper {
 
     private void fillAnalysis(Threat threat, AnalyzedThreatEvent analyzed, OffsetDateTime now) {
         threat.setAiSummary(analyzed.aiSummary());
-        threat.setAffectedTechnologies(analyzed.affectedTechnologies() == null
-                ? new HashSet<>()
-                : new HashSet<>(analyzed.affectedTechnologies()));
+        threat.setAffectedTechnologies(
+                new HashSet<>(TechnologyNames.normalizeAll(analyzed.affectedTechnologies())));
         threat.setSeverity(parseSeverity(analyzed.severity()));
         threat.setThreatCategory(parseCategory(analyzed.category()));
         threat.setAnalyzedAt(now);

@@ -102,7 +102,7 @@ public class ThreatReanalysisIntegrationTest extends BaseIntegrationTest {
             assertThat(stored.getEmbedding()).hasSize(384);
             // Read through the service, which has a session for the lazy technologies list
             assertThat(feedService.getThreatById(threat.getId()).affectedTechnologies())
-                    .containsExactlyInAnyOrder("npm", "node.js");
+                    .containsExactlyInAnyOrder("npm", "nodejs");
         }
         verify(analyzedThreatPublisher, times(2)).publish(any(AnalyzedThreatEvent.class));
     }

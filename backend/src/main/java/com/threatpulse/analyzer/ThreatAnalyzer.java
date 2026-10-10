@@ -1,5 +1,6 @@
 package com.threatpulse.analyzer;
 
+import com.threatpulse.common.domain.TechnologyNames;
 import com.threatpulse.analyzer.dto.AnalyzedThreatEvent;
 import com.threatpulse.analyzer.dto.ThreatAnalysis;
 import com.threatpulse.collector.dto.RawThreatEvent;
@@ -42,9 +43,9 @@ public class ThreatAnalyzer {
             }
 
             // The model may leave the list out, which must not break the mapping later
-            List<String> affectedTechnologies = aiResponse.getAffectedTechnologies() == null
-                    ? List.of()
-                    : aiResponse.getAffectedTechnologies();
+            // and the names are brought to one spelling, so they match what users type
+            List<String> affectedTechnologies = List.copyOf(
+                    TechnologyNames.normalizeAll(aiResponse.getAffectedTechnologies()));
 
             return Optional.of(new AnalyzedThreatEvent(
                     raw.externalId(), raw.title(), raw.description(),
