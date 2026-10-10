@@ -265,4 +265,17 @@ public class GroqAiClientTest {
 
         assertThat(result).isNull();
     }
+
+    @Test
+    void analyze_shouldReturnNullWithoutCallingTheApi_whenNoApiKeyIsConfigured() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer noCallsExpected = MockRestServiceServer.bindTo(builder).build();
+        GroqAiClient keyless = new GroqAiClient("", "openai/gpt-oss-120b", BASE_URL, 3, 60,
+                objectMapper, builder, new RequestThrottle(0), sleeps::add);
+
+        assertThat(keyless.analyze("title", "description")).isNull();
+
+        // The server mock fails the test on any unexpected request
+        noCallsExpected.verify();
+    }
 }

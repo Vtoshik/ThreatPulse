@@ -8,6 +8,13 @@
 spring:
   application:
     name: threatpulse
+  http:
+    client:
+      # Applies to every outgoing call made through the auto-configured RestClient
+      # (AI, embeddings, NVD, email). Without a timeout, one silent server blocks a
+      # request thread until the operating system gives up.
+      connect-timeout: 5s
+      read-timeout: 30s
   cache:
     type: redis
   task:

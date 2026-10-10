@@ -7,11 +7,15 @@ import com.threatpulse.common.domain.ThreatCategory;
 import com.threatpulse.feed.dto.SemanticSearchResponse;
 import com.threatpulse.feed.dto.ThreatPageResponse;
 import com.threatpulse.feed.dto.ThreatResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -20,6 +24,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -37,8 +42,27 @@ public class SearchServiceTest {
     @Mock private ThreatResponseMapper threatResponseMapper;
     @Mock private FeedService feedService;
 
-    @InjectMocks
     private SearchService searchService;
+
+    @BeforeEach
+    void setUp() {
+        // The service needs a transaction manager only for its short read-only transaction
+        PlatformTransactionManager transactionManager = new PlatformTransactionManager() {
+            @Override
+            public TransactionStatus getTransaction(TransactionDefinition definition) {
+                return new SimpleTransactionStatus();
+            }
+            @Override
+            public void commit(TransactionStatus status) { }
+            @Override
+            public void rollback(TransactionStatus status) { }
+        };
+        searchService = new SearchService(embeddingService, threatRepository,
+                threatResponseMapper, feedService, transactionManager);
+        // Used by the tests where the vector search returns no rows and the keyword search takes over
+        lenient().when(feedService.getThreats(anyInt(), anyInt(), any(), any()))
+                .thenReturn(new ThreatPageResponse(List.of(), 0, 50, 0, 0));
+    }
 
     private ThreatResponse buildResponse(String externalId) {
         return new ThreatResponse(1L, externalId, "title", "desc", "summary",
@@ -98,8 +122,10 @@ public class SearchServiceTest {
     void search_shouldTruncateLongQuery_beforeCallingTheEmbeddingApi() {
         String longQuery = "a".repeat(500);
         String truncated = "a".repeat(200);
+        Threat threat = new Threat();
         when(embeddingService.embedQuery(truncated)).thenReturn(QUERY_VECTOR);
-        when(threatRepository.findNearest(QUERY_VECTOR_TEXT, null, 10)).thenReturn(List.of());
+        when(threatRepository.findNearest(QUERY_VECTOR_TEXT, null, 10)).thenReturn(List.of(threat));
+        when(threatResponseMapper.toThreatResponse(threat)).thenReturn(buildResponse("ext-9"));
 
         searchService.search(longQuery, null, 10);
 
@@ -135,5 +161,19 @@ public class SearchServiceTest {
         assertThat(result.threats()).containsExactly(response);
         // The vector query must not run without a vector
         verify(threatRepository, never()).findNearest(any(), any(), anyInt());
+    }
+
+    @Test
+    void search_shouldFallBackToKeywordSearch_whenNoRowHasAVectorYet() {
+        ThreatResponse response = buildResponse("ext-3");
+        when(embeddingService.embedQuery("spring rce")).thenReturn(QUERY_VECTOR);
+        when(threatRepository.findNearest(QUERY_VECTOR_TEXT, null, 5)).thenReturn(List.of());
+        when(feedService.getThreats(0, 5, null, "spring rce"))
+                .thenReturn(new ThreatPageResponse(List.of(response), 0, 5, 1, 1));
+
+        SemanticSearchResponse result = searchService.search("spring rce", null, 5);
+
+        // A fresh deploy has no embeddings until the backfill ran, an empty list would look broken
+        assertThat(result.threats()).containsExactly(response);
     }
 }

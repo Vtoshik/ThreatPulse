@@ -20,12 +20,14 @@ public class NvdCollector {
     private final ThreatEventPublisher threatEventPublisher;
     private final ThreatRepository threatRepository;
     private final ObjectMapper objectMapper;
+    // The auto-configured builder carries the connect and read timeouts from application.yml
+    private final RestClient.Builder restClientBuilder;
 
     private static final String NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0";
 
     public void collect() {
         log.info("Starting NVD collection");
-        RestClient client = RestClient.create();
+        RestClient client = restClientBuilder.build();
 
         try {
             String response = client.get()

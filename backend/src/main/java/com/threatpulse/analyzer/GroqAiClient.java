@@ -41,6 +41,7 @@ public class GroqAiClient {
     private final RequestThrottle.Sleeper sleeper;
     private final int maxRetries;
     private final long maxRetryWaitMillis;
+    private final boolean apiKeyConfigured;
 
     @Autowired
     public GroqAiClient(
@@ -68,6 +69,10 @@ public class GroqAiClient {
         this.sleeper = sleeper;
         this.maxRetries = maxRetries;
         this.maxRetryWaitMillis = maxRetryWaitSeconds * 1000L;
+        this.apiKeyConfigured = apiKey != null && !apiKey.isBlank();
+        if (!apiKeyConfigured) {
+            log.warn("Groq API key is missing, new threats stay pending until a key is set");
+        }
         this.restClient = restClientBuilder
                 .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
@@ -79,6 +84,10 @@ public class GroqAiClient {
      * @return the analysis, or null if it could not be obtained
      */
     public ThreatAnalysis analyze(String title, String description) {
+        // Without a key every call would only answer 401, and each one costs a throttle slot
+        if (!apiKeyConfigured) {
+            return null;
+        }
         Map<String, Object> requestBody = buildRequestBody(buildPrompt(
                 limit(title, MAX_TITLE_CHARS), limit(description, MAX_DESCRIPTION_CHARS)));
 

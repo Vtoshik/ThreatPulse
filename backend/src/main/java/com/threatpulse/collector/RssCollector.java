@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.URL;
+import java.net.URLConnection;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -29,6 +30,8 @@ public class RssCollector {
     );
 
     private static final int MAX_ARTICLE_AGE_DAYS = 30;
+    private static final int CONNECT_TIMEOUT_MILLIS = 5_000;
+    private static final int READ_TIMEOUT_MILLIS = 20_000;
 
     public void collect() {
         for (String feedUrl : RSS_FEEDS) {
@@ -39,8 +42,12 @@ public class RssCollector {
     private void collectFeed(String feedUrl) {
         try {
             URL url = new URL(feedUrl);
+            // XmlReader(URL) has no timeouts, a silent server would block the whole run
+            URLConnection connection = url.openConnection();
+            connection.setConnectTimeout(CONNECT_TIMEOUT_MILLIS);
+            connection.setReadTimeout(READ_TIMEOUT_MILLIS);
             SyndFeedInput input = new SyndFeedInput();
-            SyndFeed feed = input.build(new XmlReader(url));
+            SyndFeed feed = input.build(new XmlReader(connection));
             String feedTitle = feed.getTitle();
 
             for (SyndEntry entry : feed.getEntries()) {
