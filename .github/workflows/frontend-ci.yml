@@ -28,5 +28,5 @@ jobs:
             key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
                                                                                          
         - name: Run tests           
-          run: npm install && npm run build                                
+          run: npm install && npm run lint && npm run build                                
           working-directory: frontend
