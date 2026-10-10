@@ -3,6 +3,7 @@ package com.threatpulse.feed;
 import com.threatpulse.feed.dto.SemanticSearchResponse;
 import com.threatpulse.feed.dto.ThreatPageResponse;
 import com.threatpulse.feed.dto.ThreatResponse;
+import com.threatpulse.feed.dto.ThreatStatsResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +36,14 @@ public class FeedController {
             @RequestParam(required = false) com.threatpulse.common.domain.Severity severity,
             @RequestParam(required = false) String q) {
         return ResponseEntity.ok(feedService.getThreats(page, size, severity, q));
+    }
+
+    /**
+     * Counts by severity for the dashboard.
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<ThreatStatsResponse> getStats() {
+        return ResponseEntity.ok(feedService.getStats());
     }
 
     /**

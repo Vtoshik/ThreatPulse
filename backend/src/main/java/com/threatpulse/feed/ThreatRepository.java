@@ -39,6 +39,14 @@ public interface ThreatRepository extends JpaRepository<Threat, Long>,
                                                         OffsetDateTime after);
     boolean existsByIdAndAnalysisStatus(Long id, AnalysisStatus status);
 
+    long countByAnalysisStatusAndPublishedAtAfter(AnalysisStatus status, OffsetDateTime after);
+
+    // One row per severity: [severity, count]
+    @Query("SELECT t.severity, COUNT(t) FROM Threat t "
+            + "WHERE t.analysisStatus = com.threatpulse.common.domain.AnalysisStatus.ANALYZED "
+            + "GROUP BY t.severity")
+    List<Object[]> countAnalyzedBySeverity();
+
     /**
      * Threats waiting for their analysis, the ones tried least recently first (never tried
      * comes before everything else). A threat that keeps failing moves to the back of the

@@ -1,10 +1,12 @@
 package com.threatpulse.feed;
 
 import com.threatpulse.common.domain.AnalysisStatus;
+import com.threatpulse.common.domain.Severity;
 import com.threatpulse.common.domain.Threat;
 import com.threatpulse.common.exception.ResourceNotFoundException;
 import com.threatpulse.feed.dto.ThreatPageResponse;
 import com.threatpulse.feed.dto.ThreatResponse;
+import com.threatpulse.feed.dto.ThreatStatsResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -15,6 +17,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -28,6 +31,33 @@ import java.util.List;
 public class FeedService {
     private final ThreatRepository threatRepository;
     private final ThreatResponseMapper threatResponseMapper;
+
+    /**
+     * Counts of analyzed threats by severity, for the dashboard. The database does the
+     * counting, so the answer stays correct however many threats are stored.
+     */
+    @Cacheable(value = "threatStats")
+    @Transactional(readOnly = true)
+    public ThreatStatsResponse getStats() {
+        long critical = 0, high = 0, medium = 0, low = 0, info = 0;
+        for (Object[] row : threatRepository.countAnalyzedBySeverity()) {
+            if (row[0] == null) {
+                continue;
+            }
+            long count = ((Number) row[1]).longValue();
+            switch ((Severity) row[0]) {
+                case CRITICAL -> critical = count;
+                case HIGH -> high = count;
+                case MEDIUM -> medium = count;
+                case LOW -> low = count;
+                case INFO -> info = count;
+            }
+        }
+        long last24h = threatRepository.countByAnalysisStatusAndPublishedAtAfter(
+                AnalysisStatus.ANALYZED, OffsetDateTime.now().minusHours(24));
+        return new ThreatStatsResponse(critical, high, medium, low, info,
+                critical + high + medium + low + info, last24h);
+    }
 
     /**
      * Retrieves a paginated list of threats ordered by collection time (descending).
