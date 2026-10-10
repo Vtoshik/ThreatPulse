@@ -10,26 +10,33 @@
     </div>
 
     <div class="auth-shell__box-wrap">
+      <!-- Registration is switched off on this server (hosted demo, local installation) -->
+      <template v-if="configLoaded && !authStore.config.registrationEnabled">
+        <div class="auth-shell__heading">
+          <h1 class="auth-shell__title">Registration is closed</h1>
+          <p class="auth-shell__sub">This server does not create new accounts.</p>
+        </div>
+        <div class="auth-shell__footer">
+          <span class="auth-shell__switch" @click="$router.push('/login')">Back to sign in</span>
+        </div>
+      </template>
+
       <!-- Step 1: Credentials -->
-      <template v-if="step === 1">
+      <template v-else-if="step === 1">
         <div class="auth-shell__heading">
           <h1 class="auth-shell__title">Create account</h1>
-          <p class="auth-shell__sub">Set up in 2 minutes. Stack filtering included.</p>
+          <p class="auth-shell__sub">A nickname and a password. No email needed.</p>
         </div>
 
         <div class="auth-shell__box">
           <div class="auth-form">
             <div class="auth-form__field">
-              <MonoLabel style="display:block; margin-bottom:6px">Name</MonoLabel>
-              <AppInput v-model="form.name" placeholder="Your name" />
-            </div>
-            <div class="auth-form__field">
-              <MonoLabel style="display:block; margin-bottom:6px">Email</MonoLabel>
-              <AppInput v-model="form.email" placeholder="you@example.com" type="email" />
+              <MonoLabel style="display:block; margin-bottom:6px">Nickname</MonoLabel>
+              <AppInput v-model="form.name" placeholder="letters, digits, _ . -" autocomplete="username" />
             </div>
             <div class="auth-form__field">
               <MonoLabel style="display:block; margin-bottom:6px">Password</MonoLabel>
-              <AppInput v-model="form.password" placeholder="min 8 characters" type="password" />
+              <AppInput v-model="form.password" placeholder="min 8 characters" type="password" autocomplete="new-password" />
             </div>
             <AppButton variant="primary" size="md" style="width:100%; margin-top:4px" @click="goToStep2()">
               Continue to stack setup
@@ -102,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 import MonoLabel from 'src/components/MonoLabel.vue'
@@ -118,7 +125,13 @@ const authStore = useAuthStore()
 const $q = useQuasar()
 
 const step = ref(1)
-const form = ref({ name: '', email: '', password: '' })
+const form = ref({ name: '', password: '' })
+const configLoaded = ref(false)
+
+onMounted(async () => {
+  await authStore.loadConfig()
+  configLoaded.value = true
+})
 const stack = ref<string[]>([])
 const stackInput = ref('')
 
@@ -139,10 +152,14 @@ function addCustom() {
 }
 
 function goToStep2() {                                     
-  if (!form.value.name || !form.value.email || !form.value.password) {
-    $q.notify({ type: 'warning', message: 'Please fill all fields' })                         
+  if (!form.value.name || !form.value.password) {
+    $q.notify({ type: 'warning', message: 'Please fill all fields' })
     return
-  }                                                                                           
+  }
+  if (form.value.password.length < 8) {
+    $q.notify({ type: 'warning', message: 'The password needs at least 8 characters' })
+    return
+  }
   step.value = 2                                           
 }
 
@@ -150,7 +167,6 @@ async function handleRegister() {
   try {
     await authStore.register(
       form.value.name,
-      form.value.email,
       form.value.password,
       stack.value
     )

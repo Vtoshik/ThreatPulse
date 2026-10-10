@@ -1,5 +1,26 @@
 import { defineStore } from "pinia";
-import axiosInstanse from "src/services/api";
+import api from "src/services/api";
+
+export interface AuthConfig {
+    registrationEnabled: boolean;
+    demoEnabled: boolean;
+    credentialsChangeEnabled: boolean;
+    emailAlertsAvailable: boolean;
+}
+
+interface Profile {
+    id: number;
+    username: string;
+    technologies?: string[];
+}
+
+// Until the server answers, show nothing that might be rejected
+const DEFAULT_CONFIG: AuthConfig = {
+    registrationEnabled: false,
+    demoEnabled: false,
+    credentialsChangeEnabled: false,
+    emailAlertsAvailable: false,
+};
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({
@@ -7,9 +28,10 @@ export const useAuthStore = defineStore('auth', {
         user: null as null | {
             id: string;
             name: string;
-            email: string;
             technologies: string[];
         },
+        config: { ...DEFAULT_CONFIG } as AuthConfig,
+        configLoaded: false,
         isLoading: false,
     }),
 
@@ -18,29 +40,82 @@ export const useAuthStore = defineStore('auth', {
     },
 
     actions: {
-        async login(email: string, password: string) {
+        async loadConfig() {
+            if (this.configLoaded) return;
+            try {
+                const response = await api.get<AuthConfig>('/api/auth/config');
+                this.config = response.data;
+                this.configLoaded = true;
+            } catch {
+                // The server is unreachable: keep the safe defaults, the next call tries again
+            }
+        },
+
+        async loadProfile() {
+            const response = await api.get<Profile>('/api/user/profile');
+            const p = response.data;
+            this.user = {
+                id: String(p.id),
+                name: p.username,
+                technologies: p.technologies ?? [],
+            };
+        },
+
+        async login(username: string, password: string) {
             try {
                 this.isLoading = true;
-
-                const response = await axiosInstanse.post(
-                    "/api/auth/login",
-                    { email, password }
-                )
-                this.accessToken = response.data.accessToken;
-                if (this.accessToken === null) {
-                    throw new Error("Failed to get access token");
-                }
-                localStorage.setItem("token", this.accessToken);
-
-                const userResponse = await axiosInstanse.get('/api/user/profile')
-                const p = userResponse.data
-                this.user = { id: p.id, name: p.username, email: p.email, technologies: p.technologies ?? [] }
-
-            } catch (err) {
-                console.log("Login failed:", err);
-                throw err;
+                const response = await api.post("/api/auth/login", { username, password });
+                this.setToken(response.data.accessToken);
+                await this.loadProfile();
             } finally {
                 this.isLoading = false;
+            }
+        },
+
+        async loginDemo() {
+            try {
+                this.isLoading = true;
+                const response = await api.post('/api/auth/demo');
+                this.setToken(response.data.accessToken);
+                await this.loadProfile();
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        async register(username: string, password: string, technologies: string[]) {
+            try {
+                this.isLoading = true;
+                const response = await api.post("/api/auth/register", { username, password });
+                this.setToken(response.data.accessToken);
+                await api.put("/api/user/technologies", technologies);
+                await this.loadProfile();
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        async changeCredentials(currentPassword: string, newUsername?: string, newPassword?: string) {
+            const response = await api.put('/api/user/credentials', {
+                currentPassword,
+                newUsername: newUsername || undefined,
+                newPassword: newPassword || undefined,
+            });
+            // A new password invalidates every earlier token, including the one in use,
+            // so the server answers with a fresh one
+            this.setToken(response.data.accessToken);
+            await this.loadProfile();
+        },
+
+        async restoreSession() {
+            const token = localStorage.getItem("token");
+            if (!token || this.user) return;
+            this.accessToken = token;
+            try {
+                await this.loadProfile();
+            } catch {
+                this.accessToken = null;
+                localStorage.removeItem("token");
             }
         },
 
@@ -50,62 +125,12 @@ export const useAuthStore = defineStore('auth', {
             localStorage.removeItem("token");
         },
 
-        async loginDemo() {
-            try {
-                this.isLoading = true;
-                const response = await axiosInstanse.post('/api/auth/demo')
-                this.accessToken = response.data.accessToken
-                localStorage.setItem('token', this.accessToken!)
-                const res = await axiosInstanse.get('/api/user/profile')
-                const p = res.data
-                this.user = { id: p.id, name: p.username, email: p.email, technologies: p.technologies ?? [] }
-            } finally {
-                this.isLoading = false
+        setToken(token: unknown) {
+            if (typeof token !== 'string' || token === '') {
+                throw new Error("Failed to get access token");
             }
-        },
-
-        async restoreSession() {
-            const token = localStorage.getItem("token");
-            if (!token || this.user) return;
             this.accessToken = token;
-            try {
-                const res = await axiosInstanse.get('/api/user/profile');
-                const p = res.data;
-                this.user = { id: p.id, name: p.username, email: p.email, technologies: p.technologies ?? [] };
-            } catch {
-                this.accessToken = null;
-                localStorage.removeItem("token");
-            }
+            localStorage.setItem("token", token);
         },
-        
-        async register(username: string, email: string, password: string, 
-            technologies: string[]) {
-            try {
-                this.isLoading = true;
-
-                const response = await axiosInstanse.post(
-                    "/api/auth/register",
-                    { username, email, password }
-                );
-                this.accessToken = response.data.accessToken;
-                if (this.accessToken === null) {
-                    throw new Error("Failed to get access token");
-                }
-                localStorage.setItem("token", this.accessToken);
-                const rp = response.data
-                this.user = { id: rp.user?.id ?? rp.id, name: rp.user?.username ?? rp.username, email: rp.user?.email ?? rp.email, technologies: [] }
-
-                await axiosInstanse.put(
-                    "/api/user/technologies",
-                    technologies
-                )
-
-            } catch (err) {
-                console.log("Registration failed:", err);
-                throw err;
-            } finally {
-                this.isLoading = false;
-            }
-        }
     }
 })

@@ -19,8 +19,8 @@
       <div class="auth-shell__box">
         <div class="auth-form">
           <div class="auth-form__field">
-            <MonoLabel style="display:block; margin-bottom:6px">Email</MonoLabel>
-            <AppInput v-model="email" placeholder="you@example.com" type="email" />
+            <MonoLabel style="display:block; margin-bottom:6px">Nickname</MonoLabel>
+            <AppInput v-model="username" placeholder="your nickname" autocomplete="username" />
           </div>
 
           <div class="auth-form__field">
@@ -38,25 +38,23 @@
             {{ authStore.isLoading ? 'Signing in...' : 'Sign in' }}
           </AppButton>
 
-          <div class="auth-form__divider" />
+          <template v-if="authStore.config.demoEnabled">
+            <div class="auth-form__divider" />
 
-          <AppButton
-            variant="ghost"
-            size="md"
-            style="width:100%"
-            :disabled="authStore.isLoading"
-            @click="handleDemo"
-          >
-            Try Demo
-          </AppButton>
-
-          <div class="auth-form__forgot">
-            <span class="auth-form__link">Forgot password?</span>
-          </div>
+            <AppButton
+              variant="ghost"
+              size="md"
+              style="width:100%"
+              :disabled="authStore.isLoading"
+              @click="handleDemo"
+            >
+              Try Demo
+            </AppButton>
+          </template>
         </div>
       </div>
 
-      <div class="auth-shell__footer">
+      <div v-if="authStore.config.registrationEnabled" class="auth-shell__footer">
         No account?&nbsp;
         <span class="auth-shell__switch" @click="$router.push('/register')">Create one</span>
       </div>
@@ -65,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import MonoLabel from 'src/components/MonoLabel.vue'
 import AppInput from 'src/components/AppInput.vue'
@@ -74,19 +72,21 @@ import { useAuthStore } from 'src/stores/auth'
 import { useQuasar } from 'quasar'
 
 const router  = useRouter()
-const email   = ref('')
+const username = ref('')
 const password = ref('')
 const authStore = useAuthStore();
 const $q = useQuasar();
 
+onMounted(() => { void authStore.loadConfig() })
+
 async function handleLogin() {
   try {
-    await authStore.login(email.value, password.value);
+    await authStore.login(username.value, password.value);
     void router.push('/app/dashboard')
   } catch {
     $q.notify({
       type: 'negative',
-      message: 'Wrong email or password',
+      message: 'Wrong nickname or password',
       position: 'top',
     })
   }

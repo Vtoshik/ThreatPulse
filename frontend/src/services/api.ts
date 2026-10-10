@@ -3,11 +3,11 @@ import type { InternalAxiosRequestConfig } from "axios";
 
 import { router } from "src/router";
 
-const axiosInstanse = axios.create({
+const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 });
 
-axiosInstanse.interceptors.request.use(
+api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
         const token = localStorage.getItem('token');
 
@@ -21,10 +21,12 @@ axiosInstanse.interceptors.request.use(
     }
 );
 
-axiosInstanse.interceptors.response.use(
+api.interceptors.response.use(
     (response) => response,
     async (error: unknown) => {
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // A wrong password on the login form also answers 401, that is not an expired session
+        const isAuthRequest = axios.isAxiosError(error) && (error.config?.url ?? '').startsWith('/api/auth/')
+        if (axios.isAxiosError(error) && error.response?.status === 401 && !isAuthRequest) {
             localStorage.removeItem("token");
             void router?.push("/login")
         }
@@ -33,4 +35,4 @@ axiosInstanse.interceptors.response.use(
     }
 );
 
-export default axiosInstanse;
+export default api;

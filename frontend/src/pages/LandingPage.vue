@@ -12,7 +12,10 @@
       </div>
       <div class="landing__nav-actions">
         <AppButton variant="ghost" size="sm" @click="$router.push('/login')">Sign in</AppButton>
-        <AppButton variant="primary" size="sm" @click="$router.push('/register')">Get started</AppButton>
+        <AppButton
+          v-if="authStore.config.registrationEnabled"
+          variant="primary" size="sm" @click="$router.push('/register')"
+        >Get started</AppButton>
       </div>
     </nav>
 
@@ -21,7 +24,7 @@
       <section class="hero">
         <div class="hero__pill">
           <span class="hero__pill-dot" />
-          3 critical CVEs detected in the last 24h
+          Open source · runs on your own machine
         </div>
 
         <h1 class="hero__headline">
@@ -35,15 +38,30 @@
         </p>
 
         <div class="hero__cta">
-          <AppButton variant="primary" size="lg" @click="$router.push('/register')">
-            Start monitoring free
+          <AppButton
+            v-if="authStore.config.registrationEnabled"
+            variant="primary" size="lg" @click="$router.push('/register')"
+          >
+            Start monitoring
           </AppButton>
-          <AppButton variant="ghost" size="lg" @click="handleDemo">
+          <AppButton
+            v-if="authStore.config.demoEnabled"
+            :variant="authStore.config.registrationEnabled ? 'ghost' : 'primary'"
+            size="lg" @click="handleDemo"
+          >
             {{ demoLoading ? 'Loading...' : 'Try Demo' }}
+          </AppButton>
+          <AppButton
+            v-if="!authStore.config.demoEnabled && !authStore.config.registrationEnabled"
+            variant="primary" size="lg" @click="$router.push('/login')"
+          >
+            Sign in
           </AppButton>
         </div>
 
-        <p class="hero__note">No credit card. Free tier covers a full personal stack.</p>
+        <p class="hero__note">
+          No email, no tracking. The hosted version is a read-only demo, the real tool runs locally.
+        </p>
       </section>
 
       <!-- Live product preview -->
@@ -160,6 +178,8 @@ const authStore = useAuthStore()
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const demoLoading = ref(false)
 
+onMounted(() => { void authStore.loadConfig() })
+
 async function handleDemo() {
   demoLoading.value = true
   try {
@@ -257,7 +277,7 @@ const FEATURES = [
   },
   {
     title: 'Real-time pipeline',
-    desc: 'NVD to Kafka to analyzer to email in under 60 seconds. No polling, no manual checks, no missed vulnerabilities.',
+    desc: 'From the public feed to an in-app alert within minutes. No polling, no manual checks.',
   },
 ]
 

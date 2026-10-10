@@ -3,7 +3,7 @@
     <div class="alerts-header">
       <PageTitle
         title="Alerts"
-        :sub="`${activeCount} active rules · ${history.length} sent today`"
+        :sub="`${activeCount} active rules · ${sentTodayCount} sent today`"
       />
       <AppButton variant="primary" size="sm" @click="$router.push('/app/alerts/new')">
         + New rule
@@ -135,6 +135,10 @@ const rules       = ref<AlertRuleDto[]>([])
 const history     = ref<AlertHistoryDto[]>([])
 const loading     = ref(false)
 const activeCount = computed(() => rules.value.filter(r => r.active).length)
+const sentTodayCount = computed(() => {
+  const today = new Date().toDateString()
+  return history.value.filter(h => new Date(h.sentAt).toDateString() === today).length
+})
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString()

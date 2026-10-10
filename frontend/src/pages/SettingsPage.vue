@@ -57,12 +57,41 @@
           </div>
         </div>
 
-        <div class="notif-row">
+        <div v-if="authStore.config.emailAlertsAvailable" class="notif-row">
           <div>
             <div class="notif-label">Email alerts</div>
-            <div class="notif-sub">{{ authStore.user?.email ?? '' }}</div>
+            <div class="notif-sub">Sent to the address set in the server configuration</div>
           </div>
           <ToggleSwitch v-model="emailOn" />
+        </div>
+        <div v-else class="notif-sub">
+          Alerts appear in the Alerts page and as live notifications. Email is not set up on this server.
+        </div>
+      </AppCard>
+
+      <!-- Account -->
+      <AppCard style="padding:20px">
+        <MonoLabel style="display:block; margin-bottom:14px">Account</MonoLabel>
+
+        <template v-if="authStore.config.credentialsChangeEnabled">
+          <div class="account-field">
+            <MonoLabel style="display:block; margin-bottom:6px">Nickname</MonoLabel>
+            <AppInput v-model="account.username" autocomplete="username" />
+          </div>
+          <div class="account-field">
+            <MonoLabel style="display:block; margin-bottom:6px">New password (optional)</MonoLabel>
+            <AppInput v-model="account.newPassword" type="password" placeholder="min 8 characters" autocomplete="new-password" />
+          </div>
+          <div class="account-field">
+            <MonoLabel style="display:block; margin-bottom:6px">Current password</MonoLabel>
+            <AppInput v-model="account.currentPassword" type="password" autocomplete="current-password" />
+          </div>
+          <AppButton variant="ghost" size="sm" :disabled="accountSaving" @click="saveAccount">
+            {{ accountSaving ? 'Saving…' : 'Update account' }}
+          </AppButton>
+        </template>
+        <div v-else class="notif-sub">
+          Account changes are disabled on this server.
         </div>
       </AppCard>
 
@@ -78,6 +107,8 @@
 </template>
 
 <script setup lang="ts">
+import axios from 'axios'
+import { useQuasar } from 'quasar'
 import { ref, computed, onMounted } from 'vue'
 import type { Severity } from 'src/types/threat'
 import { useSeverity } from 'src/composables/useSeverity'
@@ -102,6 +133,9 @@ const stackInput = ref('')
 const minSev     = ref<Severity>('HIGH')
 const emailOn    = ref(false)
 const saving     = ref(false)
+const accountSaving = ref(false)
+const account    = ref({ username: '', newPassword: '', currentPassword: '' })
+const $q         = useQuasar()
 
 const remainingAll = computed(() => ALL_TECH.filter(t => !stack.value.includes(t)))
 
@@ -140,8 +174,40 @@ async function save() {
   }
 }
 
+async function saveAccount() {
+  if (!account.value.currentPassword) {
+    $q.notify({ type: 'warning', message: 'Enter your current password' })
+    return
+  }
+  const nicknameChanged = account.value.username !== authStore.user?.name
+  if (!nicknameChanged && !account.value.newPassword) {
+    $q.notify({ type: 'warning', message: 'Nothing to change' })
+    return
+  }
+  accountSaving.value = true
+  try {
+    await authStore.changeCredentials(
+      account.value.currentPassword,
+      nicknameChanged ? account.value.username : undefined,
+      account.value.newPassword || undefined,
+    )
+    account.value.currentPassword = ''
+    account.value.newPassword = ''
+    $q.notify({ type: 'positive', message: 'Account updated' })
+  } catch (err) {
+    const message = axios.isAxiosError(err)
+      ? (err.response?.data?.message ?? 'Could not update the account')
+      : 'Could not update the account'
+    $q.notify({ type: 'negative', message })
+  } finally {
+    accountSaving.value = false
+  }
+}
+
 onMounted(() => {
   stack.value = [...(authStore.user?.technologies ?? [])]
+  account.value.username = authStore.user?.name ?? ''
+  void authStore.loadConfig()
 })
 </script>
 
@@ -150,7 +216,9 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .page-pad { padding: 16px; }
-  .settings-form { max-width: 100%; }
+  .account-field { margin-bottom: 14px; }
+
+.settings-form { max-width: 100%; }
 }
 
 .settings-form {

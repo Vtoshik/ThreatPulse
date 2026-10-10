@@ -1,6 +1,7 @@
-import axiosInstanse from './api'
+import api from './api'
 import type {
   ApiSemanticSearchResponse,
+  ApiThreatStats,
   ApiThreat,
   ApiThreatPage,
   Severity,
@@ -106,41 +107,21 @@ function mapPage(apiPage: ApiThreatPage) {
 
 export const threatService = {
   async getStats() {
-    const response = await axiosInstanse.get<ApiThreatPage>('/api/threats', {
-      params: { page: 0, size: 1000, sort: 'publishedAt,desc' },
-    })
+    // The database counts, so the numbers stay right however many threats are stored
+    const response = await api.get<ApiThreatStats>('/api/threats/stats')
+    const stats = response.data
 
-    const threats = response.data.threats
-    const today = new Date()
-    const sameDay = (value: string) => {
-      const date = new Date(value)
-      return !Number.isNaN(date.getTime()) &&
-        date.getFullYear() === today.getFullYear() &&
-        date.getMonth() === today.getMonth() &&
-        date.getDate() === today.getDate()
+    return {
+      critical: stats.critical,
+      high: stats.high,
+      medium: stats.medium,
+      low: stats.low,
+      todayCount: stats.last24h,
     }
-
-    const counts = {
-      critical: 0,
-      high: 0,
-      medium: 0,
-      low: 0,
-      todayCount: 0,
-    }
-
-    for (const threat of threats) {
-      if (threat.severity === 'CRITICAL') counts.critical += 1
-      if (threat.severity === 'HIGH') counts.high += 1
-      if (threat.severity === 'MEDIUM') counts.medium += 1
-      if (threat.severity === 'LOW') counts.low += 1
-      if (sameDay(threat.publishedAt)) counts.todayCount += 1
-    }
-
-    return counts
   },
 
   async getRecentThreats(size = 5) {
-    const response = await axiosInstanse.get<ApiThreatPage>('/api/threats', {
+    const response = await api.get<ApiThreatPage>('/api/threats', {
       params: { page: 0, size, sort: 'publishedAt,desc' },
     })
 
@@ -159,7 +140,7 @@ export const threatService = {
       severity: params.severity === 'ALL' ? undefined : params.severity,
     }
 
-    const response = await axiosInstanse.get<ApiThreatPage>('/api/threats', {
+    const response = await api.get<ApiThreatPage>('/api/threats', {
       params: cleanParams,
     })
 
@@ -167,12 +148,12 @@ export const threatService = {
   },
 
   async getThreatById(id: string | number) {
-    const response = await axiosInstanse.get<ApiThreat>(`/api/threats/${id}`)
+    const response = await api.get<ApiThreat>(`/api/threats/${id}`)
     return mapThreat(response.data)
   },
 
   async searchThreats(query: string, params?: { limit?: number; severity?: string }) {
-    const response = await axiosInstanse.get<ApiSemanticSearchResponse>('/api/threats/search', {
+    const response = await api.get<ApiSemanticSearchResponse>('/api/threats/search', {
       params: {
         q: query,
         limit: params?.limit ?? 20,

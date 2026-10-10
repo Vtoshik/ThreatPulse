@@ -51,7 +51,6 @@
         <div class="sidebar__avatar">{{ authStore.user?.name?.charAt(0).toUpperCase() ?? '?' }}</div>
         <div class="sidebar__user-info">
           <div class="sidebar__user-name">{{ authStore.user?.name ?? '' }}</div>
-          <div class="sidebar__user-email">{{ authStore.user?.email ?? '' }}</div>
         </div>
         <button class="sidebar__logout" title="Sign out" @click="handleLogout">Sign out</button>
       </div>

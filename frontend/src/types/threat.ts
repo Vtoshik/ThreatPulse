@@ -52,6 +52,16 @@ export interface ApiThreatPage {
   totalPages: number
 }
 
+export interface ApiThreatStats {
+  critical: number
+  high: number
+  medium: number
+  low: number
+  info: number
+  total: number
+  last24h: number
+}
+
 // Search returns the nearest threats only: it has no pages and no total count
 export interface ApiSemanticSearchResponse {
   threats: ApiThreat[]
