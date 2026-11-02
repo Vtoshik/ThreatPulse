@@ -95,7 +95,8 @@ public class ThreatReanalysisService {
         for (Threat threat : threats) {
             float[] embedding = embeddingService.embedDocument(ThreatMapper.embeddingText(threat));
             if (embedding == null) {
-                log.warn("Embedding not available, stopping the backfill for this run");
+                // Paused, over budget or failing: the guard has already logged the reason once
+                log.debug("Embedding not available, stopping the backfill for this run");
                 break;
             }
             threat.setEmbedding(embedding);

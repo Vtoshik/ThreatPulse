@@ -134,4 +134,132 @@ public class EmbeddingServiceTest {
         assertThat(service.embedQuery("  ")).isNull();
         server.verify();
     }
+
+    // ── Credit protection ────────────────────────────────────────────────────────────
+
+    private static final class MutableClock extends java.time.Clock {
+        private java.time.Instant now = java.time.Instant.parse("2026-11-02T10:00:00Z");
+
+        void advance(java.time.Duration duration) { now = now.plus(duration); }
+
+        @Override public java.time.ZoneId getZone() { return java.time.ZoneOffset.UTC; }
+        @Override public java.time.Clock withZone(java.time.ZoneId zone) { return this; }
+        @Override public java.time.Instant instant() { return now; }
+    }
+
+    private EmbeddingService guardedService(MockRestServiceServer[] serverHolder, MutableClock clock,
+                                            int maxDocuments, int maxQueries) {
+        RestClient.Builder builder = RestClient.builder();
+        serverHolder[0] = MockRestServiceServer.bindTo(builder).build();
+        EmbeddingGuard guard = new EmbeddingGuard(clock, java.time.Duration.ofHours(12), maxDocuments, maxQueries);
+        return new EmbeddingService("test-key", MODEL, BASE_URL, builder, guard);
+    }
+
+    @Test
+    void embedDocument_shouldSendNoRequest_whileThePauseAfterNoCreditLasts() {
+        MockRestServiceServer[] holder = new MockRestServiceServer[1];
+        MutableClock clock = new MutableClock();
+        EmbeddingService guarded = guardedService(holder, clock, 0, 0);
+        // Exactly one request is expected: a second one would fail the test
+        holder[0].expect(requestTo(ENDPOINT)).andRespond(withStatus(HttpStatus.PAYMENT_REQUIRED)
+                .contentType(MediaType.APPLICATION_JSON).body("{\"error\":\"no credits\"}"));
+
+        assertThat(guarded.embedDocument("first")).isNull();
+        assertThat(guarded.embedDocument("second")).isNull();
+        assertThat(guarded.embedQuery("a search")).isNull();
+
+        holder[0].verify();
+    }
+
+    @Test
+    void embedDocument_shouldTryAgain_afterThePauseEnded() {
+        MockRestServiceServer[] holder = new MockRestServiceServer[1];
+        MutableClock clock = new MutableClock();
+        EmbeddingService guarded = guardedService(holder, clock, 0, 0);
+        holder[0].expect(requestTo(ENDPOINT)).andRespond(withStatus(HttpStatus.PAYMENT_REQUIRED));
+        holder[0].expect(requestTo(ENDPOINT)).andRespond(withSuccess(vectorJson(384), MediaType.APPLICATION_JSON));
+
+        assertThat(guarded.embedDocument("first")).isNull();
+        clock.advance(java.time.Duration.ofHours(13));
+        assertThat(guarded.embedDocument("second")).hasSize(384);
+
+        holder[0].verify();
+    }
+
+    @Test
+    void embedDocument_shouldStopAtTheDailyBudget() {
+        MockRestServiceServer[] holder = new MockRestServiceServer[1];
+        MutableClock clock = new MutableClock();
+        EmbeddingService guarded = guardedService(holder, clock, 2, 0);
+        holder[0].expect(org.springframework.test.web.client.ExpectedCount.times(2), requestTo(ENDPOINT))
+                .andRespond(withSuccess(vectorJson(384), MediaType.APPLICATION_JSON));
+
+        assertThat(guarded.embedDocument("one")).isNotNull();
+        assertThat(guarded.embedDocument("two")).isNotNull();
+        assertThat(guarded.embedDocument("three")).isNull();
+
+        holder[0].verify();
+    }
+
+    @Test
+    void embedQuery_shouldStillWork_whenTheDocumentBudgetIsUsedUp() {
+        MockRestServiceServer[] holder = new MockRestServiceServer[1];
+        MutableClock clock = new MutableClock();
+        EmbeddingService guarded = guardedService(holder, clock, 1, 5);
+        holder[0].expect(org.springframework.test.web.client.ExpectedCount.times(2), requestTo(ENDPOINT))
+                .andRespond(withSuccess(vectorJson(384), MediaType.APPLICATION_JSON));
+
+        assertThat(guarded.embedDocument("one")).isNotNull();
+        assertThat(guarded.embedDocument("two")).isNull();
+        // The backfill used up its own budget, search is not affected
+        assertThat(guarded.embedQuery("a search")).isNotNull();
+
+        holder[0].verify();
+    }
+
+    @Test
+    void embedQuery_shouldCallTheApiOnlyOnce_forTheSameQuestion() {
+        MockRestServiceServer[] holder = new MockRestServiceServer[1];
+        EmbeddingService guarded = guardedService(holder, new MutableClock(), 0, 0);
+        holder[0].expect(requestTo(ENDPOINT)).andRespond(withSuccess(vectorJson(384), MediaType.APPLICATION_JSON));
+
+        float[] first = guarded.embedQuery("Remote Code Execution");
+        // Same words, other spelling of case and spaces: still the cached answer
+        float[] second = guarded.embedQuery("  remote code execution ");
+
+        assertThat(first).isNotNull();
+        assertThat(second).isSameAs(first);
+        holder[0].verify();
+    }
+
+    @Test
+    void embedQuery_shouldNotCacheAFailure() {
+        MockRestServiceServer[] holder = new MockRestServiceServer[1];
+        EmbeddingService guarded = guardedService(holder, new MutableClock(), 0, 0);
+        holder[0].expect(requestTo(ENDPOINT)).andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+        holder[0].expect(requestTo(ENDPOINT)).andRespond(withSuccess(vectorJson(384), MediaType.APPLICATION_JSON));
+
+        assertThat(guarded.embedQuery("spring rce")).isNull();
+        assertThat(guarded.embedQuery("spring rce")).hasSize(384);
+
+        holder[0].verify();
+    }
+
+    @Test
+    void embedDocument_shouldPauseForTheTimeInRetryAfter_onRateLimit() {
+        MockRestServiceServer[] holder = new MockRestServiceServer[1];
+        MutableClock clock = new MutableClock();
+        EmbeddingService guarded = guardedService(holder, clock, 0, 0);
+        holder[0].expect(requestTo(ENDPOINT)).andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", "120"));
+        holder[0].expect(requestTo(ENDPOINT)).andRespond(withSuccess(vectorJson(384), MediaType.APPLICATION_JSON));
+
+        assertThat(guarded.embedDocument("one")).isNull();
+        clock.advance(java.time.Duration.ofSeconds(60));
+        assertThat(guarded.embedDocument("two")).isNull();   // still paused, no request
+        clock.advance(java.time.Duration.ofSeconds(90));
+        assertThat(guarded.embedDocument("three")).isNotNull();
+
+        holder[0].verify();
+    }
 }
