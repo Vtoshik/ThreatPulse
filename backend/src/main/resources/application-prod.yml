@@ -65,3 +65,11 @@ logging:
   level:
     com.threatpulse: INFO
     org.springframework: WARN
+
+# Caching is switched off in production (spring.cache.type: none), so nothing uses Redis.
+# Without this line an unreachable Redis turns the whole /actuator/health answer into DOWN,
+# and a platform health check would then treat a working application as broken.
+management:
+  health:
+    redis:
+      enabled: false
