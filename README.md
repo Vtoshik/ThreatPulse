@@ -188,11 +188,14 @@ WebSocket: `/ws`. The STOMP `CONNECT` frame must carry `Authorization: Bearer <t
 | `GROQ_API_KEY` | LLM analysis (free at console.groq.com) |
 | `HUGGINGFACE_API_KEY` | Embeddings for semantic search (token with "Make calls to Inference Providers") |
 | `NVD_API_KEY` | Optional, raises the NVD rate limit |
+| `app.huggingface.max-document-requests-per-day`, `max-query-requests-per-day`, `out-of-credits-pause-hours` | Protect the small free embedding credit (defaults 300, 200 and 12). See below. |
 | `EMAIL_ALERTS_ENABLED`, `EMAIL_ALERTS_TO`, `RESEND_API_KEY`, `RESEND_SOURCE_EMAIL` | Optional email channel (needs a verified sender domain at Resend) |
 | `CORS_ALLOWED_ORIGINS` | Allowed frontend origins, default `http://localhost:9000` |
 | `REGISTRATION_ENABLED`, `DEMO_ENABLED`, `CREDENTIALS_CHANGE_ENABLED` | Account features in the `prod` profile |
 
 Outgoing HTTP calls have a 5 s connect and a 30 s read timeout (`spring.http.client.*`).
+
+**Embedding credit.** The Hugging Face free credit is small, so every embedding call goes through a guard: document embeddings (new threats and the backfill) and search queries have separate daily budgets, identical searches are cached for an hour, and after "no credit left" (402), an invalid key or a rate limit the app sends no request at all for a pause (12 h, 24 h, or the time the provider asks). While embeddings are unavailable, search uses keyword search and new threats are stored without a vector; the backfill fills them in later.
 
 ---
 
@@ -230,6 +233,7 @@ Stated plainly, so nobody has to find them:
 - **The hosted demo account is shared and its data is writable.** Nobody can register or change the credentials, but every visitor can edit the shared watchlist, rules and bookmarks.
 - **No token refresh and no logout endpoint.** A token lives until it expires (`JWT_EXPIRY_HOURS`). A password change does invalidate earlier tokens.
 - **Semantic search has no relevance cut-off** and no vector index. It always returns the nearest items, even when none is close.
+- **Embeddings depend on a small free credit.** When it is gone, search is keyword-only until it resets or you add credit. Nothing breaks and nothing keeps retrying.
 - **The LLM is a free-tier model.** The free daily token limit caps how many items can be analyzed per day; the rest wait as pending.
 - **Caching is off in production** (`spring.cache.type: none`) until a managed Redis is chosen.
 - **Email recipients are shared by all users** of one server, which is fine for the single-user local installation and not designed for a multi-user host.

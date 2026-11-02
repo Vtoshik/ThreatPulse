@@ -78,6 +78,14 @@ app:
     enabled: true
   pipeline:
     kafka-enabled: true
+  huggingface:
+    # Protects the small free credit of the embedding provider. Document embeddings (new
+    # threats and the backfill) and search queries have separate daily budgets, so the backfill
+    # cannot use up what search needs. Zero means no limit.
+    max-document-requests-per-day: 300
+    max-query-requests-per-day: 200
+    # After "no credit left" (HTTP 402) no request is sent for this long, then one tries again
+    out-of-credits-pause-hours: 12
   groq:
     # The free tier limits both requests and tokens per minute. Stay below the limit
     # instead of sending a burst and getting HTTP 429 back. Zero switches the throttle off.
