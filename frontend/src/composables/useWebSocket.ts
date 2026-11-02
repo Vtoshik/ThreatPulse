@@ -2,6 +2,7 @@ import { Client } from '@stomp/stompjs';
 import { onBeforeUnmount, ref } from 'vue';
 import type { ApiThreat, Threat } from 'src/types/threat';
 import { mapThreat } from 'src/services/threats.service';
+import { resolveWebSocketUrl } from 'src/services/websocket-url';
 import { useAuthStore } from 'src/stores/auth';
 import { useQuasar } from 'quasar';
 
@@ -20,7 +21,7 @@ export function useWebSocket() {
     if (client) return;
 
     client = new Client({
-      brokerURL: import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/ws',
+      brokerURL: resolveWebSocketUrl(import.meta.env.VITE_WS_URL, import.meta.env.VITE_API_URL),
       // The server checks the same token as for the REST API
       connectHeaders: {
         Authorization: `Bearer ${authStore.accessToken ?? localStorage.getItem('token') ?? ''}`,
